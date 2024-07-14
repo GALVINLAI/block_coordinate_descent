@@ -189,6 +189,19 @@ def main():
         if os.path.exists(dir_path):
             shutil.rmtree(dir_path)
             print(f"Removed existing directory: {dir_path}")
+            
+        # Run gradient descent
+        x_gd, f_x_gd, function_values_gd, eigen_values_gd, lip_diag_values_gd = gradient_descent(
+            objective, x, lr_gd, num_iter, sigma, random_keys[exp_i], 
+            skip_hessian=SKIP_ALL_HESSIAN
+        )
+
+        # Run random coordinate descent
+        x_rcd, f_x_rcd, function_values_rcd, eigen_values_rcd, lip_diag_values_rcd = random_coordinate_descent(
+            objective, x, lr_rcd, num_iter, sigma, random_keys[exp_i], 
+            skip_hessian=SKIP_ALL_HESSIAN, 
+            decay_step=30, decay_rate=0.85
+        )
 
         # Run block coordinate descent
         x_bcd, f_x_bcd, function_values_bcd, eigen_values_bcd, lip_diag_values_bcd = block_coordinate_descent(
