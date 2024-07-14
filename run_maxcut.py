@@ -45,7 +45,7 @@ def create_parser():
     # Add the number of iterations argument
     parser.add_argument('--num_iter', type=int, default=500, 
                     help='The number of iterations for the optimization algorithm')
-
+    
     return parser
 
 args = create_parser().parse_args()
@@ -259,7 +259,7 @@ def main():
             opt_goal='max', 
             opt_method='analytic',
             skip_hessian=SKIP_ALL_HESSIAN, 
-            plot_subproblem=True,
+            plot_subproblem=False,
             cyclic_mode=True)
 
         make_dir(f'exp/maxcut/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}')

@@ -20,7 +20,7 @@ This code only uses numpy, not jax.numpy.
 def block_coordinate_descent(V_list, H_list, M, input_state, theta_init, 
                              sigma=0.01,
                              max_iter=10, 
-                             PLOT_SUBPROBLEM=False, 
+                             plot_subproblem=False, 
                              PRINT_INFO=False):
     theta = np.array(theta_init)
     m = len(theta)
@@ -32,7 +32,7 @@ def block_coordinate_descent(V_list, H_list, M, input_state, theta_init,
     selected_coordinates = [None]
     theta_values = [theta.copy()]
     
-    if PLOT_SUBPROBLEM:
+    if plot_subproblem:
         # Delete and recreate the folder to save plot results
         output_dir = 'bcd/bcd_vqa_toy_plots'
         if os.path.exists(output_dir):
@@ -109,7 +109,7 @@ def block_coordinate_descent(V_list, H_list, M, input_state, theta_init,
             print(f"[BCD] Iteration {k+1}: cost values = {current_f_value}, selected coordinate = {j}, theta = {theta}")
 
         #############################################################################
-        if PLOT_SUBPROBLEM:
+        if plot_subproblem:
             # The following plots the single_variable_function and saves the function image
             # Used to verify the correctness of the theory
             def single_variable_function(theta_j):
@@ -340,7 +340,7 @@ theta_opt_bcd, f_values_bcd, iterations_bcd, selected_coordinates_bcd, theta_val
     V_list, H_list, M, input_state, theta_init, 
     sigma=SIGMA,
     max_iter=MAX_ITER,
-    PLOT_SUBPROBLEM=False,
+    plot_subproblem=False,
     PRINT_INFO=False
 )
 

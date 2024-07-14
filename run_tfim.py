@@ -127,7 +127,7 @@ def main():
         # Run block coordinate descent
         x_bcd, f_x_bcd, function_values_bcd, eigen_values_bcd, lip_diag_values_bcd = block_coordinate_descent(
             get_reward, x, num_iter, sigma, random_keys[exp_i],
-            PLOT_SUBPROBLEM=True
+            plot_subproblem=False
         )
         
         # Save data
