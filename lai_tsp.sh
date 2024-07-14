@@ -8,12 +8,12 @@ num_iter=2000
 # sigma_values=(0.0 0.01 0.02 0.05 0.1 0.2)
 # sigma_values=(0.0 0.025 0.05 0.1 0.2)
 # sigma_values=(0.0)
-sigma_values=(0.3)
+sigma_values=(0.0 0.1)
 
 # Remember, we only use lr_gd to name the folder path!!
 for sigma in "${sigma_values[@]}"; do
     python run_tsp.py --dim 90 --sigma ${sigma} --repeat ${repeat} --lr_gd 0.0001 --lr_rcd 0.001 --num_iter ${num_iter}
-    # python plot_script.py --phys tsp --lr 0.0001 --sigma ${sigma} --dim 90
+    python plot_script.py --phys tsp --lr 0.0001 --sigma ${sigma} --dim 90
 done
 
-# python big_image.py --root_dir "C:/Users/laizh/Desktop/code/random_coordinate-main/plots/tsp/lr_0.0001/dim_90" --output_dir "C:/Users/laizh/Desktop/code/random_coordinate-main/plots/tsp/lr_0.0001/dim_90/combined_images"
+python big_image.py --root_dir "C:/Users/laizh/Desktop/code/block_coordinate_descent/plots/tsp/lr_0.0001/dim_90" --output_dir "C:/Users/laizh/Desktop/code/block_coordinate_descent/plots/tsp/lr_0.0001/dim_90/combined_images"

@@ -9,8 +9,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 # Usage example:
 # python big_image.py 
-# --root_dir "C:/Users/laizh/Desktop/code/random_coordinate-main/plots/maxcut/lr_0.1/dim_20" 
-# --output_dir "C:/Users/laizh/Desktop/code/random_coordinate-main/plots/maxcut/lr_0.1/dim_20/combined_images"
+# --root_dir "C:/Users/laizh/Desktop/code/block_coordinate_descent/plots/maxcut/lr_0.1/dim_20" 
+# --output_dir "C:/Users/laizh/Desktop/code/block_coordinate_descent/plots/maxcut/lr_0.1/dim_20/combined_images"
 
 # Set font path and size
 font_path = "arial.ttf"  # Specify the desired font path here

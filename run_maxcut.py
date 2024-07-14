@@ -259,7 +259,8 @@ def main():
             opt_goal='max', 
             opt_method='analytic',
             skip_hessian=SKIP_ALL_HESSIAN, 
-            plot_subproblem=True)
+            plot_subproblem=True,
+            cyclic_mode=True)
 
         make_dir(f'exp/maxcut/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}')
         data_dict = {
