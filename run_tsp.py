@@ -216,10 +216,20 @@ def main():
 
         make_dir(f'exp/tsp/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}')
         data_dict = {
+            'function_values_gd': function_values_gd,
+            'function_values_rcd': function_values_rcd,
             'function_values_bcd': function_values_bcd,
+            'x_gd': x_gd,
+            'x_rcd': x_rcd,
             'x_bcd': x_bcd,
+            'f_x_gd': f_x_gd,
+            'f_x_rcd': f_x_rcd,
             'f_x_bcd': f_x_bcd,
+            'eigen_values_gd': eigen_values_gd,
+            'eigen_values_rcd': eigen_values_rcd,
             'eigen_values_bcd': eigen_values_bcd,
+            'lip_diag_values_gd': lip_diag_values_gd,
+            'lip_diag_values_rcd': lip_diag_values_rcd,
             'lip_diag_values_bcd': lip_diag_values_bcd,
         }
 

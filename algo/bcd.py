@@ -129,7 +129,7 @@ def block_coordinate_descent(f, initial_point, num_iterations, sigma, key,
             best_value = next_value
 
         message = f"Iteration: {i}, Value: {next_value}, Coord j: {j}({m})"
-        print(f"\n a: {a}, b: {b}, c: {c}")
+        # print(f"\n a: {a}, b: {b}, c: {c}")
         t.set_description("[BCD] Processing %s" % message)
         t.refresh()
 

@@ -35,7 +35,7 @@ def create_parser():
                         help='The number of times to repeat the experiment')
 
     # Add the learning rate for gradient descent argument
-    parser.add_argument('--lr_gd', type=float, default=0.1, 
+    parser.add_argument('--lr_gd', type=float, default=1.0, 
                         help='The learning rate for the gradient descent')
     
     # Add the learning rate for random coordinate descent argument
@@ -43,7 +43,7 @@ def create_parser():
                         help='The learning rate for the random coordinate descent')
     
     # Add the number of iterations argument
-    parser.add_argument('--num_iter', type=int, default=200, 
+    parser.add_argument('--num_iter', type=int, default=500, 
                     help='The number of iterations for the optimization algorithm')
 
     return parser
