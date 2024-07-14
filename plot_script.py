@@ -14,7 +14,7 @@ fontsize = 20
 # Set the font and style parameters for plotting to ensure consistent style in the document
 nice_fonts = {
 # Use LaTeX to write all text
-"text.usetex": True,
+# "text.usetex": True,
 "font.family": "serif",
 # Use 10pt font in plots, to match 10pt font in document
 "axes.labelsize": fontsize,

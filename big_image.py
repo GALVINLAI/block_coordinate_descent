@@ -8,9 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 # and saves the combined images to a specified output directory.
 
 # Usage example:
-# python big_image.py 
-# --root_dir "C:/Users/laizh/Desktop/code/block_coordinate_descent/plots/maxcut/lr_0.1/dim_20" 
-# --output_dir "C:/Users/laizh/Desktop/code/block_coordinate_descent/plots/maxcut/lr_0.1/dim_20/combined_images"
+# python big_image.py --root_dir "plots/maxcut/lr_0.1/dim_20" --output_dir "plots/maxcut/lr_0.1/dim_20/combined_images"
 
 # Set font path and size
 font_path = "arial.ttf"  # Specify the desired font path here
@@ -23,8 +21,8 @@ parser.add_argument('--root_dir', type=str, required=True, help='Root directory 
 parser.add_argument('--output_dir', type=str, required=True, help='Output directory to save combined images')
 
 args = parser.parse_args()
-root_dir = args.root_dir
-output_dir = args.output_dir
+root_dir = os.path.relpath(args.root_dir)
+output_dir = os.path.relpath(args.output_dir)
 
 # Ensure the output directory exists
 os.makedirs(output_dir, exist_ok=True)
@@ -43,7 +41,7 @@ def combine_images(image_filename):
     for sigma_dir in sigma_dirs:
         img_path = os.path.join(sigma_dir, image_filename)
         if os.path.exists(img_path):
-            image_paths.append(img_path)
+            image_paths.append(os.path.relpath(img_path))
             captions.append(os.path.basename(sigma_dir))
 
     if not image_paths:
@@ -89,3 +87,4 @@ def combine_images(image_filename):
 # Call combine_images function for each type of image
 for image_filename in image_filenames:
     combine_images(image_filename)
+

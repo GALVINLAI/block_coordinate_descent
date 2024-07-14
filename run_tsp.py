@@ -207,7 +207,7 @@ def main():
         x_bcd, f_x_bcd, function_values_bcd, eigen_values_bcd, lip_diag_values_bcd = block_coordinate_descent(
             objective, x, num_iter, sigma, random_keys[exp_i],
             problem_name='tsp',
-            opt_goal='max', 
+            opt_goal='max',
             opt_method='analytic',
             skip_hessian=SKIP_ALL_HESSIAN, 
             plot_subproblem=False,
