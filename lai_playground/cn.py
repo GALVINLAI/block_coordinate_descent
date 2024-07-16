@@ -16,14 +16,15 @@ def condition_number(x):
 
 # 初始猜测的 x1, x2, x3
 # initial_guess = [0.0, np.pi / 2, np.pi]
-initial_guess = [np.pi / 4, np.pi / 2, np.pi]
-
+# initial_guess = [np.pi / 4, np.pi / 2, np.pi]
+# initial_guess =  np.random.uniform(0, 2 * np.pi, 3)
 # 使用不同的求解器
 solvers = ['Nelder-Mead', 'Powell', 'CG', 'BFGS']
 
 results = []
 
 for solver in solvers:
+    initial_guess =  np.random.uniform(0, 2 * np.pi, 3)
     result = minimize(condition_number, initial_guess, method=solver, bounds=[(0, 2 * np.pi), (0, 2 * np.pi), (0, 2 * np.pi)])
     x1_opt, x2_opt, x3_opt = result.x
     A_opt = create_matrix(x1_opt, x2_opt, x3_opt)

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # My computer is too slow, so I can only reduce the number of repeats; otherwise, it takes too long. Default repeat=10
-repeat=3
-num_iter=300
+repeat=1
+num_iter=1000
 
 # Define multiple sigma variable values
 # sigma_values=(0.0 0.01 0.02 0.05 0.1 0.2)
@@ -10,7 +10,7 @@ num_iter=300
 
 # Use the seq command to generate a sequence from 0.01 to 0.2 with a step size of 0.01, and store the result in an array
 # sigma_values=($(seq 0.00 0.01 0.2))
-sigma_values=(0.1)
+sigma_values=(0.0 0.1 0.2)
 
 # Remember, we only use lr_gd to name the folder path!!
 for sigma in "${sigma_values[@]}"; do

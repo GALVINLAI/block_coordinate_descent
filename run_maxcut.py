@@ -271,7 +271,7 @@ def main():
             opt_method='analytic',
             skip_hessian=SKIP_ALL_HESSIAN, 
             plot_subproblem=False,
-            cyclic_mode=False)
+            cyclic_mode=True)
 
         x_bcd_g, f_x_bcd_g, function_values_bcd_g, eigen_values_bcd_g, lip_diag_values_bcd_g = block_coordinate_descent_g(
             objective, x, num_iter, sigma, random_keys[exp_i],
@@ -280,7 +280,7 @@ def main():
             opt_method='analytic',
             skip_hessian=SKIP_ALL_HESSIAN, 
             plot_subproblem=False,
-            cyclic_mode=False)
+            cyclic_mode=True)
         
         make_dir(f'exp/maxcut/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}')
         data_dict = {

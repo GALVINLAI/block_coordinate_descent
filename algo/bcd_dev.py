@@ -278,6 +278,9 @@ def block_coordinate_descent_g(f, initial_point, num_iterations, sigma, key,
         #####################################################################
         # 使用其他点做三角差值获得 appr_single_var_fun
         theta_vals = [5.390303024888212, 1.2015025457884192, 3.2959214465226303]
+        # theta_vals = np.random.uniform(0, 2 * np.pi, size=(3,))
+        # theta_vals = [0.16521743513397463, 2.2596095415271282, 4.354009870477592]
+        
         fun_vals = []
         for val in theta_vals:
             key, subkey = jrd.split(key)
