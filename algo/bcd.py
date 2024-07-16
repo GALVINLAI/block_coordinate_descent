@@ -144,8 +144,8 @@ def block_coordinate_descent(f, initial_point, num_iterations, sigma, key,
                 return f(theta_old.at[j].set(theta_j))
 
             def plot_single_var_fun():
-                x_range = 2 * np.pi
-                x = np.linspace(0, x_range, 100)
+                x_range = 4 * np.pi
+                x = np.linspace(-x_range, x_range, 500)
                 exact_y = np.array([exact_single_var_fun(value) for value in x])
                 appr_y = np.array([appr_single_var_fun(value) for value in x])
                 plt.plot(x, exact_y, label='exact f(theta_j)')

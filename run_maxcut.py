@@ -9,10 +9,11 @@ from algo.gd import gradient_descent
 from algo.rcd import random_coordinate_descent
 from utils import dump, make_dir, hamiltonian_to_matrix
 from algo.bcd import block_coordinate_descent
+from algo.bcd_dev import block_coordinate_descent_c, block_coordinate_descent_g
 
 # Set up configurations
 # config.update("jax_enable_x64", True)
-np.random.seed(6)
+# np.random.seed(6)
 
 # adding the configuration here
 def create_parser():
@@ -216,7 +217,7 @@ def main():
     make_dir('exp/maxcut')
     # make_dir(f'exp/maxcut/dim_{dim}')
 
-    random_keys = jrd.split(jrd.PRNGKey(42), repeat)
+    random_keys = jrd.split(jrd.PRNGKey(1), repeat)
 
     SKIP_ALL_HESSIAN = True
 
@@ -252,33 +253,62 @@ def main():
             decay_step=30, decay_rate=0.85
         )
 
+        # # Run block coordinate descent
+        # x_bcd, f_x_bcd, function_values_bcd, eigen_values_bcd, lip_diag_values_bcd = block_coordinate_descent(
+        #     objective, x, num_iter, sigma, random_keys[exp_i],
+        #     problem_name='max_cut',
+        #     opt_goal='max', 
+        #     opt_method='analytic',
+        #     skip_hessian=SKIP_ALL_HESSIAN, 
+        #     plot_subproblem=False,
+        #     cyclic_mode=True)
+        
         # Run block coordinate descent
-        x_bcd, f_x_bcd, function_values_bcd, eigen_values_bcd, lip_diag_values_bcd = block_coordinate_descent(
+        x_bcd_c, f_x_bcd_c, function_values_bcd_c, eigen_values_bcd_c, lip_diag_values_bcd_c = block_coordinate_descent_c(
             objective, x, num_iter, sigma, random_keys[exp_i],
             problem_name='max_cut',
             opt_goal='max', 
             opt_method='analytic',
             skip_hessian=SKIP_ALL_HESSIAN, 
             plot_subproblem=False,
-            cyclic_mode=True)
+            cyclic_mode=False)
 
+        x_bcd_g, f_x_bcd_g, function_values_bcd_g, eigen_values_bcd_g, lip_diag_values_bcd_g = block_coordinate_descent_g(
+            objective, x, num_iter, sigma, random_keys[exp_i],
+            problem_name='max_cut',
+            opt_goal='max', 
+            opt_method='analytic',
+            skip_hessian=SKIP_ALL_HESSIAN, 
+            plot_subproblem=False,
+            cyclic_mode=False)
+        
         make_dir(f'exp/maxcut/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}')
         data_dict = {
             'function_values_gd': function_values_gd,
             'function_values_rcd': function_values_rcd,
-            'function_values_bcd': function_values_bcd,
+            # 'function_values_bcd': function_values_bcd,
+            'function_values_bcd_c': function_values_bcd_c,
+            'function_values_bcd_g': function_values_bcd_g,
             'x_gd': x_gd,
             'x_rcd': x_rcd,
-            'x_bcd': x_bcd,
+            # 'x_bcd': x_bcd,
+            'x_bcd_c': x_bcd_c,
+            'x_bcd_g': x_bcd_g,
             'f_x_gd': f_x_gd,
             'f_x_rcd': f_x_rcd,
-            'f_x_bcd': f_x_bcd,
+            # 'f_x_bcd': f_x_bcd,
+            'f_x_bcd_c': f_x_bcd_c,
+            'f_x_bcd_g': f_x_bcd_g,
             'eigen_values_gd': eigen_values_gd,
             'eigen_values_rcd': eigen_values_rcd,
-            'eigen_values_bcd': eigen_values_bcd,
+            # 'eigen_values_bcd': eigen_values_bcd,
+            'eigen_values_bcd_c': eigen_values_bcd_c,
+            'eigen_values_bcd_g': eigen_values_bcd_g,
             'lip_diag_values_gd': lip_diag_values_gd,
             'lip_diag_values_rcd': lip_diag_values_rcd,
-            'lip_diag_values_bcd': lip_diag_values_bcd,
+            # 'lip_diag_values_bcd': lip_diag_values_bcd,
+            'lip_diag_values_bcd_c': lip_diag_values_bcd_c,
+            'lip_diag_values_bcd_g': lip_diag_values_bcd_g,
         }
 
         dump(data_dict, f'exp/maxcut/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}/data_dict.pkl')

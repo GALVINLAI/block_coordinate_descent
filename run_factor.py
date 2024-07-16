@@ -143,7 +143,12 @@ def main():
         # Run block coordinate descent
         x_bcd, f_x_bcd, function_values_bcd, eigen_values_bcd, lip_diag_values_bcd = block_coordinate_descent(
             objective, x, num_iter, sigma, random_keys[exp_i],
-            plot_subproblem=False
+            problem_name='factor',
+            opt_goal='max', 
+            opt_method='analytic',
+            skip_hessian=False, 
+            plot_subproblem=True,
+            cyclic_mode=False
         )
 
         make_dir(f'exp/factor/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}')

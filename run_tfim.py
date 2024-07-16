@@ -10,7 +10,7 @@ import jax.random as jrd
 from utils import load, dump, make_dir
 from algo.gd import gradient_descent
 from algo.rcd import random_coordinate_descent
-from algo.bcd import block_coordinate_descent, block_coordinate_descent_each
+from algo.bcd import block_coordinate_descent
 
 # Set up configurations
 np.random.seed(42)
@@ -124,10 +124,23 @@ def main():
         if os.path.exists(f'exp/tfim/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}/data_dict.pkl'):
             continue
 
+        # # Run gradient descent
+        # function_values_gd, x_gd, f_x_gd, eigen_values_gd, lip_diag_values_gd = gradient_descent(get_reward, x, lr_gd, num_iter, sigma, random_keys[exp_i])
+
+        # # Run random coordinate descent
+        # x_rcd, f_x_rcd, function_values_rcd, eigen_values_rcd, lip_diag_values_rcd = random_coordinate_descent(
+        #     get_reward, x, lr_rcd, num_iter, sigma, random_keys[exp_i]
+        # )
+
         # Run block coordinate descent
         x_bcd, f_x_bcd, function_values_bcd, eigen_values_bcd, lip_diag_values_bcd = block_coordinate_descent(
             get_reward, x, num_iter, sigma, random_keys[exp_i],
-            plot_subproblem=False
+            problem_name='tfim',
+            opt_goal='max', 
+            opt_method='analytic',
+            skip_hessian=False, 
+            plot_subproblem=True,
+            cyclic_mode=False
         )
         
         # Save data

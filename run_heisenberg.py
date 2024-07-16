@@ -146,8 +146,13 @@ def main():
         MAX_ITER_BCD = 100
         # Run block coordinate descent
         x_bcd, f_x_bcd, function_values_bcd, eigen_values_bcd, lip_diag_values_bcd = block_coordinate_descent(
-            get_reward, x, MAX_ITER_BCD, sigma, random_keys[exp_i],
-            plot_subproblem=False
+            get_reward, x, num_iter, sigma, random_keys[exp_i],
+            problem_name='heisenberg',
+            opt_goal='max', 
+            opt_method='analytic',
+            skip_hessian=False, 
+            plot_subproblem=True,
+            cyclic_mode=False
         )
         
         make_dir(f'exp/heisenberg/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}')
