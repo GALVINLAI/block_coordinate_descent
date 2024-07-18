@@ -5,12 +5,12 @@ import jax
 import jax.numpy as jnp
 import jax.random as jrd
 # from jax.config import config
+from utils import dump, make_dir, hamiltonian_to_matrix
+
 from algo.gd import gradient_descent
 from algo.rcd import random_coordinate_descent
-from utils import dump, make_dir, hamiltonian_to_matrix
-from algo.bcd import block_coordinate_descent
-from algo.bcd_dev import block_coordinate_descent_c, block_coordinate_descent_g
-from algo.bcd_dev import block_coordinate_descent_reg, block_coordinate_descent_opt_rcd
+from algo.bcd_dev import block_coordinate_descent
+
 # Set up configurations
 # config.update("jax_enable_x64", True)
 # np.random.seed(6)
@@ -28,7 +28,7 @@ def create_parser():
                         help='The dimension of the problem')
     
     # Add the sigma argument
-    parser.add_argument('--sigma', type=float, default=0.1, 
+    parser.add_argument('--sigma', type=float, default=0.0, 
                         help='The sigma for the Gaussian noise of the gradient. Note that this is multiplied by the gradient')
     
     # Add the repeat argument
@@ -212,14 +212,17 @@ print(objective(ry_angles))
 ######################## Solver setup ########################
 
 def main():
-    # try the gradient descent algorithm
-    
     make_dir('exp/maxcut')
     # make_dir(f'exp/maxcut/dim_{dim}')
 
-    random_keys = jrd.split(jrd.PRNGKey(1), repeat)
+    # Check if the folder exists and delete it if it does.
+    # Note that we delete everything inside the folder
+    dir_path = f'exp/maxcut/lr_{lr_gd}/dim_{dim}/sigma_{sigma}'
+    if os.path.exists(dir_path):
+        shutil.rmtree(dir_path)
+        print(f"Removed existing directory: {dir_path}")
 
-    SKIP_ALL_HESSIAN = True
+    random_keys = jrd.split(jrd.PRNGKey(1), repeat)
 
     for exp_i in range(repeat):
         print('='*100)
@@ -227,123 +230,109 @@ def main():
         # Define the initial value for x
         # Uniformly distributed between [0, 2pi]
         # Ensure that the initial point of each experiment exp_i is random
-        x = jrd.uniform(random_keys[exp_i], (dim,)) * 2 * np.pi
-        
-        # Check if the folder exists and delete it if it does.
-        # Note that we delete everything inside the folder
-        dir_path = f'exp/maxcut/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}'
-        if os.path.exists(dir_path):
-            shutil.rmtree(dir_path)
-            print(f"Removed existing directory: {dir_path}")
+        init_x = jrd.uniform(random_keys[exp_i], (dim,)) * 2 * np.pi
 
-        # Check if the file exists and skip if it does.
-        # if os.path.exists(f'exp/maxcut/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}/data_dict.pkl'):
-        #     continue
+        # Initialize data_dict
+        data_dict = {}
 
+        ############################################################
         # Run gradient descent
-        x_gd, f_x_gd, function_values_gd, eigen_values_gd, lip_diag_values_gd = gradient_descent(
-            objective, x, lr_gd, num_iter, sigma, random_keys[exp_i], 
-            skip_hessian=SKIP_ALL_HESSIAN
+        x_gd, f_x_gd, function_values_gd = gradient_descent(
+            objective, init_x, lr_gd, num_iter, sigma, random_keys[exp_i]
         )
+        data_dict.update({
+            'x_gd': x_gd,
+            'f_x_gd': f_x_gd,
+            'function_values_gd': function_values_gd,
+        })
 
         # Run random coordinate descent
-        x_rcd, f_x_rcd, function_values_rcd, eigen_values_rcd, lip_diag_values_rcd = random_coordinate_descent(
-            objective, x, lr_rcd, num_iter, sigma, random_keys[exp_i], 
-            skip_hessian=SKIP_ALL_HESSIAN, 
+        x_rcd, f_x_rcd, function_values_rcd = random_coordinate_descent(
+            objective, init_x, lr_rcd, num_iter, sigma, random_keys[exp_i], 
             decay_step=30, decay_rate=0.85
         )
+        data_dict.update({
+            'x_rcd': x_rcd,
+            'f_x_rcd': f_x_rcd,
+            'function_values_rcd': function_values_rcd,
+        })
 
-        # # Run block coordinate descent
-        # x_bcd, f_x_bcd, function_values_bcd, eigen_values_bcd, lip_diag_values_bcd = block_coordinate_descent(
-        #     objective, x, num_iter, sigma, random_keys[exp_i],
-        #     problem_name='max_cut',
-        #     opt_goal='max', 
-        #     opt_method='analytic',
-        #     skip_hessian=SKIP_ALL_HESSIAN, 
-        #     plot_subproblem=False,
-        #     cyclic_mode=True)
-        
-        # # Run block coordinate descent
-        # x_bcd_c, f_x_bcd_c, function_values_bcd_c, eigen_values_bcd_c, lip_diag_values_bcd_c = block_coordinate_descent_c(
-        #     objective, x, num_iter, sigma, random_keys[exp_i],
-        #     problem_name='max_cut',
-        #     opt_goal='max', 
-        #     opt_method='analytic',
-        #     skip_hessian=SKIP_ALL_HESSIAN, 
-        #     plot_subproblem=False,
-        #     cyclic_mode=True)
+        ############################################################
+        # global setting for block coordinate descent methods
+        problem_name='max_cut'
+        opt_goal='max'
+        plot_subproblem=False
+        cyclic_mode=True
 
-        # x_bcd_g, f_x_bcd_g, function_values_bcd_g, eigen_values_bcd_g, lip_diag_values_bcd_g = block_coordinate_descent_g(
-        #     objective, x, num_iter, sigma, random_keys[exp_i],
-        #     problem_name='max_cut',
-        #     opt_goal='max', 
-        #     opt_method='analytic',
-        #     skip_hessian=SKIP_ALL_HESSIAN, 
-        #     plot_subproblem=True,
-        #     cyclic_mode=False)
-        
-        fevl_num_each_iter = 6
+        # # Run block coordinate descent (classical thetas)
+        # x_bcd_c, f_x_bcd_c, function_values_bcd_c = block_coordinate_descent(
+        #     objective, init_x, num_iter, sigma, random_keys[exp_i],
+        #     problem_name=problem_name,
+        #     opt_goal=opt_goal, 
+        #     plot_subproblem=plot_subproblem,
+        #     cyclic_mode=cyclic_mode,
+        #     mode='classical'
+        # )
+        # data_dict.update({
+        #     'x_bcd_c': x_bcd_c,
+        #     'f_x_bcd_c': f_x_bcd_c,
+        #     'function_values_bcd_c': function_values_bcd_c,
+        # })
 
-        # x_bcd_reg, f_x_bcd_reg, function_values_bcd_reg, eigen_values_bcd_reg, lip_diag_values_bcd_reg = block_coordinate_descent_reg(
-        #     objective, x, num_iter, sigma, random_keys[exp_i],
-        #     problem_name='max_cut',
-        #     opt_goal='max', 
-        #     opt_method='analytic',
-        #     skip_hessian=SKIP_ALL_HESSIAN, 
-        #     plot_subproblem=False,
-        #     cyclic_mode=True,
-        #     fevl_num_each_iter=fevl_num_each_iter)
-        
-        x_bcd, f_x_bcd, function_values_bcd, eigen_values_bcd, lip_diag_values_bcd = block_coordinate_descent_opt_rcd(
-            objective, x, num_iter, sigma, random_keys[exp_i],
-            problem_name='max_cut',
-            opt_goal='max', 
-            opt_method='analytic',
-            skip_hessian=SKIP_ALL_HESSIAN, 
-            plot_subproblem=False,
-            cyclic_mode=False,
-            alpha=1.0)
-        
-        
+        # # Run block coordinate descent (general thetas)
+        # x_bcd_g, f_x_bcd_g, function_values_bcd_g = block_coordinate_descent(
+        #     objective, init_x, num_iter, sigma, random_keys[exp_i],
+        #     problem_name=problem_name,
+        #     opt_goal=opt_goal,
+        #     plot_subproblem=plot_subproblem,
+        #     cyclic_mode=cyclic_mode,
+        #     mode='general'
+        # )
+        # data_dict.update({
+        #     'x_bcd_g': x_bcd_g,
+        #     'f_x_bcd_g': f_x_bcd_g,
+        #     'function_values_bcd_g': function_values_bcd_g,
+        # })
 
+        # # Run block coordinate descent (regression)
+        # fevl_num_each_iter = 5
+        # x_bcd_reg, f_x_bcd_reg, function_values_bcd_reg = block_coordinate_descent(
+        #     objective, init_x, num_iter, sigma, random_keys[exp_i],
+        #     problem_name=problem_name,
+        #     opt_goal=opt_goal,  
+        #     plot_subproblem=plot_subproblem,
+        #     cyclic_mode=cyclic_mode,
+        #     fevl_num_each_iter=fevl_num_each_iter,
+        #     mode='reg'
+        # )
+        # data_dict.update({
+        #     'x_bcd_reg': x_bcd_reg,
+        #     'f_x_bcd_reg': f_x_bcd_reg,
+        #     'function_values_bcd_reg': function_values_bcd_reg,
+        #     'fevl_num_each_iter_reg': fevl_num_each_iter,
+        # })
 
+        # Run block coordinate descent with optimized random coordinate descent
+        x_bcd_opt_rcd, f_x_bcd_opt_rcd, function_values_bcd_opt_rcd = block_coordinate_descent(
+            objective, init_x, num_iter, sigma, random_keys[exp_i],
+            problem_name=problem_name,
+            opt_goal=opt_goal, 
+            plot_subproblem=plot_subproblem,
+            cyclic_mode=cyclic_mode,
+            mode='opt_rcd'
+        )
+        data_dict.update({
+            'x_bcd_opt_rcd': x_bcd_opt_rcd,
+            'f_x_bcd_opt_rcd': f_x_bcd_opt_rcd,
+            'function_values_bcd_opt_rcd': function_values_bcd_opt_rcd,
+        })
 
         make_dir(f'exp/maxcut/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}')
-        data_dict = {
-            'function_values_gd': function_values_gd,
-            'function_values_rcd': function_values_rcd,
-            'function_values_bcd': function_values_bcd,
-            # 'function_values_bcd_c': function_values_bcd_c,
-            # 'function_values_bcd_g': function_values_bcd_g,
-            # 'function_values_bcd_reg': function_values_bcd_reg,
-            'x_gd': x_gd,
-            'x_rcd': x_rcd,
-            'x_bcd': x_bcd,
-            # 'x_bcd_c': x_bcd_c,
-            # 'x_bcd_g': x_bcd_g,
-            # 'x_bcd_reg': x_bcd_reg,
-            'f_x_gd': f_x_gd,
-            'f_x_rcd': f_x_rcd,
-            'f_x_bcd': f_x_bcd,
-            # 'f_x_bcd_c': f_x_bcd_c,
-            # 'f_x_bcd_g': f_x_bcd_g,
-            # 'f_x_bcd_reg': f_x_bcd_reg,
-            'eigen_values_gd': eigen_values_gd,
-            'eigen_values_rcd': eigen_values_rcd,
-            'eigen_values_bcd': eigen_values_bcd,
-            # 'eigen_values_bcd_c': eigen_values_bcd_c,
-            # 'eigen_values_bcd_g': eigen_values_bcd_g,
-            # 'eigen_values_bcd_reg': eigen_values_bcd_reg,
-            'lip_diag_values_gd': lip_diag_values_gd,
-            'lip_diag_values_rcd': lip_diag_values_rcd,
-            'lip_diag_values_bcd': lip_diag_values_bcd,
-            # 'lip_diag_values_bcd_c': lip_diag_values_bcd_c,
-            # 'lip_diag_values_bcd_g': lip_diag_values_bcd_g,
-            # 'lip_diag_values_bcd_reg': lip_diag_values_bcd_reg,
-            # others
-            'fevl_num_each_iter_reg': fevl_num_each_iter,
-        }
 
+        # Save data_dict to file (or perform further operations)
+        # For example:
+        # with open(f'exp/maxcut/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}/data.pkl', 'wb') as f:
+        #     pickle.dump(data_dict, f)
         dump(data_dict, f'exp/maxcut/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}/data_dict.pkl')
 
 if __name__ == "__main__":

@@ -9,8 +9,7 @@ Additionally, JAX supports GPU and TPU acceleration, and its JIT compilation can
 import jax.random as jrd
 from tqdm import trange  # tqdm is used for displaying progress bars.
 
-def gradient_descent(f, initial_point, learning_rate, num_iterations, sigma, key, 
-                     skip_hessian=False):
+def gradient_descent(f, initial_point, learning_rate, num_iterations, sigma, key):
     """
     Minimize the function f using the gradient descent algorithm.
     
@@ -35,7 +34,6 @@ def gradient_descent(f, initial_point, learning_rate, num_iterations, sigma, key
     # jax.hessian(f) returns a function that computes the Hessian matrix of f.
     # jax.jit compiles these computation functions to improve their runtime efficiency.
     grad_f = jax.jit(jax.grad(f))
-    hess_f = jax.jit(jax.hessian(f))
     # JIT compilation is a dynamic compilation technique that compiles code to machine code during execution, improving runtime speed.
     # JAX provides the jax.jit function to JIT compile computation processes.
 
@@ -48,8 +46,6 @@ def gradient_descent(f, initial_point, learning_rate, num_iterations, sigma, key
     t = trange(num_iterations, desc="Bar desc", leave=True)
 
     function_values = [f(initial_point)]
-    eigen_values = []
-    lip_diag_values = []  # lip is Lipschitz constant
 
     # Perform gradient descent
     for i in t:
@@ -70,24 +66,13 @@ def gradient_descent(f, initial_point, learning_rate, num_iterations, sigma, key
         function_value = f(x)
         function_values.append(function_value)
         message = f"Iteration: {i}, Value: {function_value}"
-        
-        # Compute the Hessian matrix if skip_hessian is False
-        # Note that the following computations are ancillary and not used for gradient descent. They are not for second-order optimization.
-        if not skip_hessian:
-            # Adding the Hessian info
-            hessian_mat = hess_f(x)
-            vals, vecs = np.linalg.eig(np.array(hessian_mat))
-            eigen_values.append(vals)
-            # The diagonal values of the Hessian matrix are stored in lip_diag_values.
-            # These diagonal values can be used to estimate the local Lipschitz constant for each dimension, helping to adjust the learning rate or understand changes during gradient descent.
-            lip_diag_values.append(np.diag(hessian_mat))
-        
+             
         # Update the progress bar
         t.set_description("[GD] Processing %s" % message)
         t.refresh()  # to show the update immediately
 
     # Print the final value of x
-    print("[GD] Final value of x:", x)
+    # print("[GD] Final value of x:", x)
     print("[GD] Final value of f:", function_value)
 
-    return x, function_value, function_values, eigen_values, lip_diag_values
+    return x, function_value, function_values

@@ -3,9 +3,10 @@ import jax
 import jax.random as jrd
 from tqdm import trange
 
-def random_coordinate_descent(f, initial_point, alpha, num_iterations, sigma, key, 
-                              skip_hessian=False, 
-                              decay_step=30, decay_rate=-1.0, decay_threshold=1e-4):
+def random_coordinate_descent(f, initial_point, alpha, num_iterations, sigma, key,
+                              decay_step=30, 
+                              decay_rate=-1.0, 
+                              decay_threshold=1e-4):
     """
     Random Coordinate Descent algorithm for optimizing a function f using automatic differentiation.
 
@@ -20,16 +21,13 @@ def random_coordinate_descent(f, initial_point, alpha, num_iterations, sigma, ke
         - best_value: the minimum value of f found during the algorithm
     """
     grad_f = jax.jit(jax.grad(f))
-    hess_f = jax.jit(jax.hessian(f))
 
     current_point = initial_point
     best_point = current_point
     best_value = f(current_point)
 
     function_values = [best_value]
-    eigen_values = []
-    lip_diag_values = []
-    
+
     # Print a separator before the progress bar
     print("-"*100)
     
@@ -61,6 +59,8 @@ def random_coordinate_descent(f, initial_point, alpha, num_iterations, sigma, ke
 
         # Update the best point and value if the new point is better
         next_value = f(next_point)
+
+        # notice that this is maximization
         if next_value > best_value:
             best_point = next_point
             best_value = next_value
@@ -71,18 +71,11 @@ def random_coordinate_descent(f, initial_point, alpha, num_iterations, sigma, ke
 
         message = f"Iteration: {i}, Value: {next_value}"
 
-        if not skip_hessian:
-            # Adding the Hessian info
-            hessian_mat = hess_f(current_point)
-            vals, vecs = np.linalg.eig(np.array(hessian_mat))
-            eigen_values.append(vals)
-            lip_diag_values.append(np.diag(hessian_mat))
-        
         t.set_description("[RCD] Processing %s" % message)
         t.refresh()  # to show the update immediately
 
     # Print the final value of x
-    print("[RCD] Final value of x:", next_point)
+    # print("[RCD] Final value of x:", next_point)
     print("[RCD] Final value of f:", best_value)
     
-    return best_point, best_value, function_values, eigen_values, lip_diag_values
+    return best_point, best_value, function_values

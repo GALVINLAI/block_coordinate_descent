@@ -31,7 +31,7 @@ os.makedirs(output_dir, exist_ok=True)
 sigma_dirs = glob.glob(os.path.join(root_dir, 'sigma_*'))
 
 # List of image filenames
-image_filenames = ['energy_HM_fun_evals.png', 'energy_HM.png', 'lip_HM.png', 'lip_max_HM.png']
+image_filenames = ['energy_HM_fun_evals.png', 'energy_HM.png']
 
 def combine_images(image_filename):
     # Store all target image paths and corresponding sigma directory names
