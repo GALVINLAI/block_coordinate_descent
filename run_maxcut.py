@@ -28,7 +28,7 @@ def create_parser():
                         help='The dimension of the problem')
     
     # Add the sigma argument
-    parser.add_argument('--sigma', type=float, default=0.0, 
+    parser.add_argument('--sigma', type=float, default=0.02, 
                         help='The sigma for the Gaussian noise of the gradient. Note that this is multiplied by the gradient')
     
     # Add the repeat argument
@@ -262,55 +262,70 @@ def main():
         problem_name='max_cut'
         opt_goal='max'
         plot_subproblem=False
-        cyclic_mode=True
+        cyclic_mode=False
 
-        # # Run block coordinate descent (classical thetas)
-        # x_bcd_c, f_x_bcd_c, function_values_bcd_c = block_coordinate_descent(
-        #     objective, init_x, num_iter, sigma, random_keys[exp_i],
-        #     problem_name=problem_name,
-        #     opt_goal=opt_goal, 
-        #     plot_subproblem=plot_subproblem,
-        #     cyclic_mode=cyclic_mode,
-        #     mode='classical'
-        # )
-        # data_dict.update({
-        #     'x_bcd_c': x_bcd_c,
-        #     'f_x_bcd_c': f_x_bcd_c,
-        #     'function_values_bcd_c': function_values_bcd_c,
-        # })
+        # Run block coordinate descent (classical thetas)
+        x_bcd_c, f_x_bcd_c, function_values_bcd_c = block_coordinate_descent(
+            objective, init_x, num_iter, sigma, random_keys[exp_i],
+            problem_name=problem_name,
+            opt_goal=opt_goal, 
+            plot_subproblem=plot_subproblem,
+            cyclic_mode=cyclic_mode,
+            mode='classical'
+        )
+        data_dict.update({
+            'x_bcd_c': x_bcd_c,
+            'f_x_bcd_c': f_x_bcd_c,
+            'function_values_bcd_c': function_values_bcd_c,
+        })
 
-        # # Run block coordinate descent (general thetas)
-        # x_bcd_g, f_x_bcd_g, function_values_bcd_g = block_coordinate_descent(
-        #     objective, init_x, num_iter, sigma, random_keys[exp_i],
-        #     problem_name=problem_name,
-        #     opt_goal=opt_goal,
-        #     plot_subproblem=plot_subproblem,
-        #     cyclic_mode=cyclic_mode,
-        #     mode='general'
-        # )
-        # data_dict.update({
-        #     'x_bcd_g': x_bcd_g,
-        #     'f_x_bcd_g': f_x_bcd_g,
-        #     'function_values_bcd_g': function_values_bcd_g,
-        # })
+        # Run block coordinate descent (general thetas)
+        x_bcd_g, f_x_bcd_g, function_values_bcd_g = block_coordinate_descent(
+            objective, init_x, num_iter, sigma, random_keys[exp_i],
+            problem_name=problem_name,
+            opt_goal=opt_goal,
+            plot_subproblem=plot_subproblem,
+            cyclic_mode=cyclic_mode,
+            mode='general'
+        )
+        data_dict.update({
+            'x_bcd_g': x_bcd_g,
+            'f_x_bcd_g': f_x_bcd_g,
+            'function_values_bcd_g': function_values_bcd_g,
+        })
 
-        # # Run block coordinate descent (regression)
-        # fevl_num_each_iter = 5
-        # x_bcd_reg, f_x_bcd_reg, function_values_bcd_reg = block_coordinate_descent(
-        #     objective, init_x, num_iter, sigma, random_keys[exp_i],
-        #     problem_name=problem_name,
-        #     opt_goal=opt_goal,  
-        #     plot_subproblem=plot_subproblem,
-        #     cyclic_mode=cyclic_mode,
-        #     fevl_num_each_iter=fevl_num_each_iter,
-        #     mode='reg'
-        # )
-        # data_dict.update({
-        #     'x_bcd_reg': x_bcd_reg,
-        #     'f_x_bcd_reg': f_x_bcd_reg,
-        #     'function_values_bcd_reg': function_values_bcd_reg,
-        #     'fevl_num_each_iter_reg': fevl_num_each_iter,
-        # })
+        # Run block coordinate descent (general thetas)
+        x_bcd_random_thetas, f_x_bcd_random_thetas, function_values_bcd_random_thetas = block_coordinate_descent(
+            objective, init_x, num_iter, sigma, random_keys[exp_i],
+            problem_name=problem_name,
+            opt_goal=opt_goal,
+            plot_subproblem=plot_subproblem,
+            cyclic_mode=cyclic_mode,
+            mode='random_thetas'
+        )
+        data_dict.update({
+            'x_bcd_random_thetas': x_bcd_random_thetas,
+            'f_x_bcd_random_thetas': f_x_bcd_random_thetas,
+            'function_values_bcd_random_thetas': function_values_bcd_random_thetas,
+        })
+
+        # Run block coordinate descent (regression)
+        fevl_num_each_iter = 5
+        x_bcd_reg, f_x_bcd_reg, function_values_bcd_reg = block_coordinate_descent(
+            objective, init_x, num_iter, sigma, random_keys[exp_i],
+            problem_name=problem_name,
+            opt_goal=opt_goal,  
+            plot_subproblem=plot_subproblem,
+            cyclic_mode=cyclic_mode,
+            fevl_num_each_iter=fevl_num_each_iter,
+            mode='reg'
+        )
+        data_dict.update({
+            'x_bcd_reg': x_bcd_reg,
+            'f_x_bcd_reg': f_x_bcd_reg,
+            'function_values_bcd_reg': function_values_bcd_reg,
+            'fevl_num_each_iter_reg': fevl_num_each_iter,
+        })
 
         # Run block coordinate descent with optimized random coordinate descent
         x_bcd_opt_rcd, f_x_bcd_opt_rcd, function_values_bcd_opt_rcd = block_coordinate_descent(
@@ -325,6 +340,21 @@ def main():
             'x_bcd_opt_rcd': x_bcd_opt_rcd,
             'f_x_bcd_opt_rcd': f_x_bcd_opt_rcd,
             'function_values_bcd_opt_rcd': function_values_bcd_opt_rcd,
+        })
+
+        # Run block coordinate descent with optimized random coordinate descent
+        x_bcd_opt_rcd2, f_x_bcd_opt_rcd2, function_values_bcd_opt_rcd2 = block_coordinate_descent(
+            objective, init_x, num_iter, sigma, random_keys[exp_i],
+            problem_name=problem_name,
+            opt_goal=opt_goal, 
+            plot_subproblem=plot_subproblem,
+            cyclic_mode=cyclic_mode,
+            mode='opt_rcd2'
+        )
+        data_dict.update({
+            'x_bcd_opt_rcd2': x_bcd_opt_rcd2,
+            'f_x_bcd_opt_rcd2': f_x_bcd_opt_rcd2,
+            'function_values_bcd_opt_rcd2': function_values_bcd_opt_rcd2,
         })
 
         make_dir(f'exp/maxcut/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}')

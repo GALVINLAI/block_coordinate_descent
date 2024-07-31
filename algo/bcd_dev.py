@@ -81,7 +81,8 @@ def block_coordinate_descent(f, initial_point, num_iterations, sigma, key,
                              cyclic_mode=False, 
                              fevl_num_each_iter=6,
                              # mode='classical', 'general', 'opt_rcd', 'reg'
-                             mode='classical'):
+                             mode='classical',
+                             alpha=0.8):
     
     theta = initial_point
     best_point = theta
@@ -115,7 +116,12 @@ def block_coordinate_descent(f, initial_point, num_iterations, sigma, key,
                     ])
             fun_vals = estimate_coefficients(f, theta, j, sigma, key, theta_vals)
             a, b, c = inv_A @ fun_vals
-        elif mode == 'general' or mode == 'opt_rcd':
+        elif mode == 'random_thetas':
+            theta_vals = np.random.uniform(0, 2 * np.pi, size=3)
+            A = interp_matrix(theta_vals)
+            fun_vals = estimate_coefficients(f, theta, j, sigma, key, theta_vals)
+            a, b, c = np.linalg.solve(A, fun_vals)
+        elif mode == 'general' or mode == 'opt_rcd' or mode == 'opt_rcd2':
             theta_vals = [0, np.pi*2/3, np.pi*4/3]
             inv_A = np.array([
                     [1/3, 1/3, 1/3],
@@ -142,15 +148,30 @@ def block_coordinate_descent(f, initial_point, num_iterations, sigma, key,
             decay_step=30
             decay_rate=0.85
             decay_threshold=1e-4
-            alpha=1.0
+            # alpha=1.0
             if decay_rate > 0 and (i + 1 ) % decay_step == 0:
                 alpha = alpha * decay_rate
                 alpha = max(alpha, decay_threshold)
-            learning_rate = 1.0
-            # learning_rate = alpha
+            # learning_rate = 1.0
+            learning_rate = alpha
             gradient = appr_f_prime(theta[j])
             sign = 1 if opt_goal == 'max' else -1
             theta = theta.at[j].add(sign * learning_rate * gradient)
+        elif mode == 'opt_rcd2':
+            # 使用 appr fun 估计偏导，然后更新. 更新2次。
+            decay_step=30
+            decay_rate=0.85
+            decay_threshold=1e-4
+            # alpha=1.0
+            if decay_rate > 0 and (i + 1 ) % decay_step == 0:
+                alpha = alpha * decay_rate
+                alpha = max(alpha, decay_threshold)
+            # learning_rate = 1.0
+            learning_rate = alpha
+            sign = 1 if opt_goal == 'max' else -1
+            for _ in range(2):
+                gradient = appr_f_prime(theta[j])
+                theta = theta.at[j].add(sign * learning_rate * gradient)
         else: # mode='classical', 'general', 'reg'
             theta = update_theta(opt_goal, a, b, c, theta, j, appr_single_var_fun)
 
