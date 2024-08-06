@@ -19,11 +19,12 @@ shift=np.random.rand()
 theta_vals3 = theta_vals2 + shift
 A3=interp_matrix(theta_vals3)
 
-
 print(np.linalg.cond(A1))
 print(mse(theta_vals1))
+
 print(np.linalg.cond(A2))
 print(mse(theta_vals2))
+
 print(np.linalg.cond(A3))
 print(mse(theta_vals3))
 
