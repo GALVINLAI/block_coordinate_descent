@@ -5,6 +5,7 @@ import os
 import shutil
 import matplotlib.pyplot as plt
 from tqdm import trange
+from scipy.optimize import minimize
 
 '''
 The bcd algorithm here is compatible with Ding's code
@@ -81,7 +82,7 @@ def block_coordinate_descent(f, initial_point, num_iterations, sigma, key,
                              cyclic_mode=False, 
                              fevl_num_each_iter=6,
                              # mode='classical', 'general', 'opt_rcd', 'reg'
-                             mode='classical',
+                             mode='general',
                              alpha=0.8):
     
     theta = initial_point
@@ -105,6 +106,7 @@ def block_coordinate_descent(f, initial_point, num_iterations, sigma, key,
 
         theta_old = theta.copy()
 
+        # not optimal interpolation 
         if mode == 'classical':
             # our first version of the algorithm
             theta_vals = [0, np.pi/2, np.pi]
@@ -121,7 +123,8 @@ def block_coordinate_descent(f, initial_point, num_iterations, sigma, key,
             A = interp_matrix(theta_vals)
             fun_vals = estimate_coefficients(f, theta, j, sigma, key, theta_vals)
             a, b, c = np.linalg.solve(A, fun_vals)
-        elif mode == 'general' or mode == 'opt_rcd' or mode == 'opt_rcd2':
+        # optimal interpolation 
+        elif mode == 'general' or mode == 'opt_rcd' or mode == 'opt_rcd2' or mode=='robust':
             theta_vals = [0, np.pi*2/3, np.pi*4/3]
             inv_A = np.array([
                     [1/3, 1/3, 1/3],
@@ -172,9 +175,38 @@ def block_coordinate_descent(f, initial_point, num_iterations, sigma, key,
             for _ in range(2):
                 gradient = appr_f_prime(theta[j])
                 theta = theta.at[j].add(sign * learning_rate * gradient)
+        elif mode == 'robust':
+            # np.where(condition, x, y)
+            # np.where 是 NumPy 提供的一个函数，用于根据条件选择数组中的元素。
+            # 它的功能类似于三元表达式 x if condition else y，但可以对数组的每个元素进行操作。
+
+            # 定义内部目标函数
+            def inner_objective(x):
+                x = x[0] if isinstance(x, np.ndarray) else x
+                tx = np.array([1, np.cos(x), np.sin(x)])
+                bound = 0.5
+                deltas = np.ones(3) * bound
+                hat_z = np.array([a, b, c])
+                if opt_goal == 'max':
+                    z_star = np.where(tx < 0, hat_z + deltas, hat_z - deltas)
+                else:
+                    z_star = np.where(tx > 0, hat_z + deltas, hat_z - deltas)
+            
+                fun_value = z_star[0] + z_star[1] * np.cos(x) + z_star[2] * np.sin(x)
+                if opt_goal == 'max':
+                    return -fun_value
+                else:
+                    return fun_value    
+            # 优化
+            x0 = np.random.uniform(0, 2 * np.pi)
+            x0 = np.pi 
+            result = minimize(inner_objective, x0)
+            new_theta_j = result.x[0]
+            theta = theta.at[j].set(new_theta_j)
         else: # mode='classical', 'general', 'reg'
             theta = update_theta(opt_goal, a, b, c, theta, j, appr_single_var_fun)
 
+        
         next_point = theta
         next_value = f(theta)
         function_values.append(next_value)

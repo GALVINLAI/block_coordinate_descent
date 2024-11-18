@@ -8,7 +8,7 @@ num_iter=2000
 # sigma_values=(0.0 0.01 0.02 0.05 0.1 0.2)
 # sigma_values=(0.0 0.025 0.05 0.1 0.2)
 # sigma_values=(0.0)
-sigma_values=(0.0 0.1 0.2)
+sigma_values=(0.01 0.1 0.2)
 
 # Remember, we only use lr_gd to name the folder path!!
 for sigma in "${sigma_values[@]}"; do

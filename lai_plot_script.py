@@ -55,6 +55,8 @@ def collect_function_values(folder_path, experiments):
         'bcd_g': [],
         'bcd_reg': [],
         'bcd_random_thetas': [],
+        'bcd_robust': [],
+        'oicd': []
     }
     
     for experiment in experiments:
@@ -116,11 +118,14 @@ def plot_function_evaluations(stats, plot_path, args, data):
         times['bcd_c'] = np.arange(len(stats['bcd_c']['mean'])) * 3
     if 'bcd_g' in stats:
         times['bcd_g'] = np.arange(len(stats['bcd_g']['mean'])) * 3
+    if 'bcd_robust' in stats:
+        times['bcd_robust'] = np.arange(len(stats['bcd_robust']['mean'])) * 3
     if 'bcd_reg' in stats:
         times['bcd_reg'] = np.arange(len(stats['bcd_reg']['mean'])) * data['fevl_num_each_iter_reg']
     if 'bcd_random_thetas' in stats:
         times['bcd_random_thetas'] = np.arange(len(stats['bcd_random_thetas']['mean'])) * 3
-
+    if 'oicd' in stats:
+        times['oicd'] = np.arange(len(stats['oicd']['mean'])) * 2
 
 
     for key, color in zip(times.keys(), colors[:len(times)]):

@@ -23,7 +23,7 @@ def objective2(theta_vals, x):
 # Example usage
 # np.random.seed(4)
 x = np.random.uniform(0, 2 * np.pi, size=1)[0]
-# x = 0.6
+x = 0
 # Define the bounds for theta_vals
 bounds = [(0, 2 * np.pi) for _ in range(3)]
 
