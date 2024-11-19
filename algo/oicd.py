@@ -11,6 +11,51 @@ from scipy.optimize import minimize
 The oicd algorithm here is compatible with Ding's code
 '''
 
+def update_theta_if_unique_frequency(opt_goal, a, b, c, hat_f):
+    # The goal here is to find the analytic solution of hat_f, not exact_single_var_fun
+    # And the solution should be within 0 to 2*pi
+    if np.isclose(b, 0) and np.isclose(c, 0):
+        # Constant function. Any value is an extrema, so it remains unchanged.
+        theta_star = 0.0
+    elif np.isclose(b, 0) and not np.isclose(c, 0):
+        # sin function, extrema influenced by amplitude c
+        if opt_goal == 'max':
+            theta_star = (np.pi / 2) if c > 0 else (3 * np.pi / 2)
+        elif opt_goal == 'min':
+            theta_star = (3 * np.pi / 2) if c > 0 else (np.pi / 2)
+    elif np.isclose(c, 0) and not np.isclose(b, 0):
+        # cos function, extrema influenced by amplitude b
+        if opt_goal == 'max':
+            theta_star = 0.0 if b > 0 else np.pi
+        elif opt_goal == 'min':
+            theta_star = np.pi if b > 0 else 0.0
+    else: # not np.isclose(c, 0) and not np.isclose(b, 0)
+        theta_star = np.arctan(c / b)
+        IS_MAXIMIZER = hat_f(theta_star) > a
+        IS_POSITIVE = theta_star > 0
+        if opt_goal == 'max':
+            if IS_POSITIVE:
+                if not IS_MAXIMIZER:
+                    theta_star += np.pi
+            else:
+                if IS_MAXIMIZER:
+                    theta_star += 2 * np.pi
+                else:
+                    theta_star += np.pi
+        elif opt_goal == 'min':
+            if IS_POSITIVE:
+                if IS_MAXIMIZER:
+                    theta_star += np.pi
+            else:
+                if IS_MAXIMIZER:
+                    theta_star += np.pi
+                else:
+                    theta_star += 2 * np.pi
+    
+    hat_f_value = hat_f(theta_star)
+
+    return theta_star, hat_f_value
+
 def construct_Es_inv(s, Omegas):
     """
     构造块对角矩阵 E_s^{-1}，每个块为 B_i^T，其中 B_i 为旋转矩阵。
@@ -44,14 +89,13 @@ def construct_Es_inv(s, Omegas):
 
 
 def oicd(f, generators_dict, initial_point, num_iterations, sigma, key,
-                             problem_name, 
+                             problem_name,
                              opt_goal='max', 
                              plot_subproblem=False,
                              cyclic_mode=False, 
                              subproblem_iter=20,
-                             fevl_num_each_iter=6,
-                             mode='general',
-                             alpha=0.8):
+                             solver_flag = False
+                             ):
     
     theta = initial_point
     best_point = theta
@@ -90,12 +134,13 @@ def oicd(f, generators_dict, initial_point, num_iterations, sigma, key,
             # theta_old[j] = point
             fun_val = f(theta.at[j].set(point)) + jrd.normal(subkey, shape=()) * sigma
             fun_vals.append(fun_val)
+
         fun_vals = np.array(fun_vals)
 
         hat_z = E_s_inv @ (inv_A @ fun_vals)
 
         # 定义 f(x) 的计算，包括 t(x) 的计算
-        def hat_f(x): # appr_single_var_fun
+        def hat_f(x): # hat_f
             # 计算 t_x 时，直接将 1 / np.sqrt(2) 加到每个值中
             r= len(Omegas)
             t_x = np.array([1 / np.sqrt(2)] + [func(Omegas[k] * x).item() for k in range(r) for func in (np.cos, np.sin)])
@@ -107,22 +152,30 @@ def oicd(f, generators_dict, initial_point, num_iterations, sigma, key,
         # 设置最大迭代步数
         options = {'maxiter': subproblem_iter, 'disp': False}
 
-        if opt_goal == 'max':
-            HAT_f = lambda x: - hat_f(x)
+        if solver_flag:
+            # 当solver_flag为True时，使用自定义的更新规则更新theta_star
+            # 当r=1时，直接计算theta_star
+            a = hat_z[0]/np.sqrt(2)
+            b = hat_z[1]
+            c = hat_z[2]
+
+            theta_star, hat_f_value = update_theta_if_unique_frequency(opt_goal, a, b, c, hat_f)
         else:
-            HAT_f = hat_f
+            if opt_goal == 'max':
+                HAT_f = lambda x: - hat_f(x)
+            else:
+                HAT_f = hat_f
 
-        # 运行优化算法求解子问题
-        result = minimize(HAT_f, initial_guess, options=options)
+            # 运行优化算法求解子问题
+            result = minimize(HAT_f, initial_guess, options=options)
+            # 获取最优解和最小值
+            theta_star = result.x.item()  # 最优解
+            hat_f_value = result.fun  # 最小值
 
-        # 获取最优解和最小值
-        theta_star = result.x.item()  # 最优解
-        hat_f_value = result.fun  # 最小值
-
-        # 如果是最大化问题，取负值
-        if opt_goal == 'max':
-            hat_f_value = -hat_f_value
-
+            # 如果是最大化问题，取负值
+            if opt_goal == 'max':
+                hat_f_value = -hat_f_value
+                   
         theta = theta.at[j].set(theta_star)
         next_point = theta
         next_value = f(theta)
@@ -134,10 +187,10 @@ def oicd(f, generators_dict, initial_point, num_iterations, sigma, key,
             best_value = next_value
 
         message = f"Iteration: {i}, Value: {next_value}, Coord j: {j}({m})"
-        t.set_description(f"[OICD-{mode}] Processing %s" % message)
+        t.set_description(f"[OICD] Processing %s" % message)
         t.refresh()
 
-    print(f"[OICD-{mode}] Final value of f:", best_value)
+    print(f"[OICD] Final value of f:", best_value)
 
     return best_point, best_value, function_values
 

@@ -1,4 +1,3 @@
-# The code is adapted from https://minatoyuichiro.medium.com/variational-quantum-factoring-using-qaoa-and-vqe-on-blueqat-29c6f4f195f1 and https://arxiv.org/pdf/1411.6758.pdf
 import argparse
 import os
 import matplotlib
@@ -118,59 +117,84 @@ dim = 2 * num_layer
 params_dryrun = jnp.array([2 * np.pi] * dim)
 print(objective(params_dryrun))
 
-def main():
-    # Try the gradient descent algorithm
+
+
+ry_angles = params_dryrun
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import find_peaks
+
+def plot_single_objective(objective, params, j, plot_flag=True):
+    """
+    Plots the objective function (e.g., fidelity) as a function of the varied angle
+    at a specific index, while keeping other angles fixed. Optionally, disables plotting.
+
+    Arguments:
+        objective -- Function handle for the reward (fidelity) function
+        params -- List of angles (alpha and beta values) for the params
+        j -- Index of the angle to keep fixed
+        plot_flag -- Boolean flag to enable or disable plotting (default is True)
+    """
+    # Define the angle range for the varied angle
+    angle_range = np.linspace(-2 * np.pi, 2 * np.pi, 500)  # Angle range from -4π to 4π
     
-    make_dir('exp/factor')
-    make_dir(f'exp/factor/dim_{dim}')
-    random_keys = jrd.split(jrd.PRNGKey(42), repeat)
-    for exp_i in range(repeat):
-        # Define the initial value for x
-        x = jrd.uniform(random_keys[exp_i], (dim, )) * 2 * np.pi
-        
-        if os.path.exists(f'exp/factor/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}/data_dict.pkl'):
-            continue
+    # Define the new objective function that varies the angle at position j
+    def single_f(x, params):
+        params = params.at[j].set(x)
+        return objective(params)
+    # single_f = lambda x: objective(params[:j] + [x] + params[j+1:])
 
-        # # Run gradient descent
-        # function_values_gd, x_gd, f_x_gd, eigen_values_gd, lip_diag_values_gd = gradient_descent(objective, x, lr_gd, num_iter, sigma, random_keys[exp_i], skip_hessian=True)
+    # Array to store the objective function values
+    single_f_values = []
 
-        # # Run random coordinate descent
-        # x_rcd, f_x_rcd, function_values_rcd, eigen_values_rcd, lip_diag_values_rcd = random_coordinate_descent(
-        #     objective, x, lr_rcd, num_iter, sigma, random_keys[exp_i], skip_hessian=True
-        # )
+    # Loop through the angle range and calculate the objective function value for each angle
+    for angle in angle_range:
+        single_f_values.append(single_f(angle, params))  # Calculate the objective function value
 
-        MAX_ITER_BCD = 100
-        # Run block coordinate descent
-        x_bcd, f_x_bcd, function_values_bcd, eigen_values_bcd, lip_diag_values_bcd = block_coordinate_descent(
-            objective, x, num_iter, sigma, random_keys[exp_i],
-            problem_name='factor',
-            opt_goal='max', 
-            opt_method='analytic',
-            skip_hessian=False, 
-            plot_subproblem=True,
-            cyclic_mode=False
-        )
+    # If plot_flag is True, plot the objective function
+    if plot_flag:
+        plt.plot(angle_range, single_f_values)
+        plt.xlabel(f'Angle at index {j} (params[{j}])')
+        plt.ylabel('Objective Function Value')
+        plt.title(f'Objective Function vs Angle at Index {j}')
+        plt.grid(True)
+        plt.show()
 
-        make_dir(f'exp/factor/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}')
-        data_dict = {
-            'function_values_gd': function_values_gd,
-            'function_values_rcd': function_values_rcd,
-            'function_values_bcd': function_values_bcd,
-            'x_gd': x_gd,
-            'x_rcd': x_rcd,
-            'x_bcd': x_bcd,
-            'f_x_gd': f_x_gd,
-            'f_x_rcd': f_x_rcd,
-            'f_x_bcd': f_x_bcd,
-            'eigen_values_gd': eigen_values_gd,
-            'eigen_values_rcd': eigen_values_rcd,
-            'eigen_values_bcd': eigen_values_bcd,
-            'lip_diag_values_gd': lip_diag_values_gd,
-            'lip_diag_values_rcd': lip_diag_values_rcd,
-            'lip_diag_values_bcd': lip_diag_values_bcd,
-        }
+    # Find the peaks (local maxima) in the objective function values
+    peaks, _ = find_peaks(single_f_values)
 
-        dump(data_dict, f'exp/factor/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}/data_dict.pkl')
+    print("所有的峰值点:", angle_range[peaks])
+    
+    # If there are peaks, find the maximum peak values
+    if len(peaks) > 0:
+        peak_values = np.array(single_f_values)[peaks]  # Peak values at the corresponding indices
+        max_peak_value = np.max(peak_values)  # Find the maximum peak value
 
-if __name__ == "__main__":
-    main()
+        # Use np.isclose to allow comparison with tolerance (allowing for small errors)
+        max_peak_indices = peaks[np.isclose(peak_values, max_peak_value, atol=1e-5)]  # Find indices within tolerance
+
+        print("最大峰值:", max_peak_value)
+        print("最大峰值所在的角度位置:", angle_range[max_peak_indices])
+
+        # Find the distances between adjacent maximum peak indices
+        if len(max_peak_indices) > 1:
+            peak_distances = np.diff(angle_range[max_peak_indices])  # Calculate the distances between adjacent peaks
+            print("相邻最大峰值之间的距离:", peak_distances)
+        else:
+            print("没有找到相邻的最大峰值")
+    else:
+        print("没有找到峰值")
+
+# # Example usage:
+# # Assume `objective` is your function and `ry_angles` is your parameter list
+plot_single_objective(objective, ry_angles, 36, plot_flag=True)  # To plot the graph
+# plot_single_objective(objective, ry_angles, 2, plot_flag=False)  # To only calculate and print peaks without plotting
+
+# # Loop through all positions in the params array
+# for j in range(len(ry_angles)):
+#     print(f"Processing angle at index {j} (params[{j}])")
+#     plot_single_objective(objective, ry_angles, j, plot_flag=False)
+
+

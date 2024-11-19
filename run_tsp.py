@@ -220,11 +220,13 @@ def main():
 
         ############################################################
         # global setting for OICD
-        
+
         problem_name='tsp'
         opt_goal='max'
         plot_subproblem=False
-        cyclic_mode=False
+        cyclic_mode=True
+        solver_flag = True
+        # solver_flag = False
 
         opt_interp_points = np.array([0, np.pi*2/3, np.pi*4/3])
 
@@ -234,7 +236,8 @@ def main():
                     [0, 1/np.sqrt(3), -1/np.sqrt(3)]
                     ])
         
-        omega_set = [2]
+        # omega_set = [2]
+        omega_set = [1] 
 
         generators_dict = {}
 
@@ -252,7 +255,8 @@ def main():
             opt_goal=opt_goal, 
             plot_subproblem=plot_subproblem,
             cyclic_mode=cyclic_mode,
-            mode='classical'
+            subproblem_iter=20,
+            solver_flag = solver_flag,
         )
         data_dict.update({
             'x_oicd': x_oicd,
@@ -261,12 +265,12 @@ def main():
         })
 
 
-        # ############################################################
-        # # global setting for block coordinate descent methods
-        # problem_name='tsp'
-        # opt_goal='max'
-        # plot_subproblem=False
-        # cyclic_mode=True
+        ############################################################
+        # global setting for block coordinate descent methods
+        problem_name='tsp'
+        opt_goal='max'
+        plot_subproblem=False
+        cyclic_mode=True
 
         # # Run block coordinate descent (classical thetas)
         # x_bcd_c, f_x_bcd_c, function_values_bcd_c = block_coordinate_descent(

@@ -11,7 +11,7 @@ num_iter=500
 # Use the seq command to generate a sequence from 0.01 to 0.2 with a step size of 0.01, and store the result in an array
 # sigma_values=($(seq 0.00 0.02 0.2))
 # sigma_values=(0.0 0.01)
-sigma_values=(0.0 0.01 0.02 0.05 0.1 0.2)
+sigma_values=(0.0 0.01 0.05 0.1 0.2 0.3)
 # sigma_values=(0.01)
 
 # Remember, we only use lr_gd to name the folder path!!
