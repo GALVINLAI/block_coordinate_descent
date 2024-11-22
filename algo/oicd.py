@@ -57,16 +57,6 @@ def update_theta_if_unique_frequency(opt_goal, a, b, c, hat_f):
     return theta_star, hat_f_value
 
 def construct_Es_inv(s, Omegas):
-    """
-    构造块对角矩阵 E_s^{-1}，每个块为 B_i^T，其中 B_i 为旋转矩阵。
-    
-    参数:
-    s -- 标量，旋转角度的尺度。
-    Omegas -- 列表，包含 Omega_i 的值。
-    
-    返回:
-    E_s_inv -- 构造的块对角矩阵 E_s^{-1}。
-    """
     # 计算旋转矩阵 B_i^T
     num_blocks = len(Omegas) + 1  # 第一块是 1x1 矩阵 [1]，之后每个块为 2x2 矩阵
     total_size = num_blocks * 2 - 1  # 计算总大小
@@ -87,7 +77,6 @@ def construct_Es_inv(s, Omegas):
     
     return E_s_inv
 
-
 def oicd(f, generators_dict, initial_point, num_iterations, sigma, key,
                              problem_name,
                              opt_goal='max', 
@@ -104,9 +93,6 @@ def oicd(f, generators_dict, initial_point, num_iterations, sigma, key,
     hat_f_value = best_value
     hat_function_values = [best_value]
 
-    # if plot_subproblem:
-    #     output_dir = setup_plot_subproblem(problem_name)
-
     print("-"*100)
     
     t = trange(num_iterations, desc="Bar desc", leave=True)
@@ -117,8 +103,6 @@ def oicd(f, generators_dict, initial_point, num_iterations, sigma, key,
         else:
             key, subkey = jrd.split(key)
             j = jrd.randint(subkey, shape=(), minval=0, maxval=m)
-
-        # theta_old = theta.copy()
 
         interp_points = generators_dict[f'Generator_{j}']["opt_interp_points"]
         inv_A = generators_dict[f'Generator_{j}']['inverse_interp_matrix']
@@ -131,7 +115,6 @@ def oicd(f, generators_dict, initial_point, num_iterations, sigma, key,
         fun_vals = [hat_f_value]
         for point in interp_points[1:]:
             key, subkey = jrd.split(key)
-            # theta_old[j] = point
             fun_val = f(theta.at[j].set(point)) + jrd.normal(subkey, shape=()) * sigma
             fun_vals.append(fun_val)
 
@@ -139,14 +122,11 @@ def oicd(f, generators_dict, initial_point, num_iterations, sigma, key,
 
         hat_z = E_s_inv @ (inv_A @ fun_vals)
 
-        # 定义 f(x) 的计算，包括 t(x) 的计算
         def hat_f(x): # hat_f
-            # 计算 t_x 时，直接将 1 / np.sqrt(2) 加到每个值中
             r= len(Omegas)
             t_x = np.array([1 / np.sqrt(2)] + [func(Omegas[k] * x).item() for k in range(r) for func in (np.cos, np.sin)])
             return np.dot(t_x, hat_z)
 
-        # 使用 scipy.optimize.minimize 最小化目标函数
         initial_guess = theta[j]  # 初始值一定要选择当前值
 
         # 设置最大迭代步数

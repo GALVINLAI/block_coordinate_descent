@@ -99,15 +99,18 @@ def process_files(base_path, target_language='英文'):
                 translate_file(file_path, output_path, target_language, 'markdown')
 
 # 示例调用
-base_path = 'lai_playground' # 指定文件夹
-base_path = './'
+# base_path = 'lai_playground' # 指定文件夹
+# base_path = './'
+base_path = 'algo'
 
 # 指定要排除的文件名列表
 excluded_files = [
     'example.ipynb',
     'bcd_dev.py',
     'bcd_dev_old.py',
-    'tanslate_ai.py'
+    'tanslate_ai.py',
+    'gd.py',
+    'rcd.py',
 ]
 
 process_files(base_path, target_language='英文')
