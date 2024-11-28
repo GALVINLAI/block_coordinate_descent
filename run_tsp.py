@@ -11,8 +11,11 @@ from utils import dump, make_dir, hamiltonian_to_matrix
 
 from algo.gd import gradient_descent
 from algo.rcd import random_coordinate_descent
-from algo.bcd_dev import block_coordinate_descent
-from algo.oicd import oicd
+from algo.rcd_mini_batch import random_coordinate_descent_mini_batch
+
+
+# from algo.bcd_dev import block_coordinate_descent
+# from algo.oicd import oicd
 
 # Set up configurations
 matplotlib.use("Agg")  # Set the matplotlib backend to 'Agg'
@@ -218,59 +221,73 @@ def main():
             'function_values_rcd': function_values_rcd,
         })
 
+
+        # Run random coordinate descent - mini-batch
+
+        x_rcd_batch, f_x_rcd_batch, function_values_rcd_batch = random_coordinate_descent_mini_batch(
+            objective, init_x, lr_rcd, num_iter, sigma, random_keys[exp_i], 
+            decay_step=30, decay_rate=0.85,
+            batch_size=10
+        )
+        data_dict.update({
+            'x_rcd_batch': x_rcd_batch,
+            'f_x_rcd_batch': f_x_rcd_batch,
+            'function_values_rcd_batch': function_values_rcd_batch,
+        })
+
         ############################################################
         # global setting for OICD
 
-        problem_name='tsp'
-        opt_goal='max'
-        plot_subproblem=False
-        cyclic_mode=True
-        solver_flag = True
-        # solver_flag = False
+        # problem_name='tsp'
+        # opt_goal='max'
+        # plot_subproblem=False
+        # cyclic_mode=True
+        # solver_flag = True
+        # # solver_flag = False
 
-        opt_interp_points = np.array([0, np.pi*2/3, np.pi*4/3])
+        # opt_interp_points = np.array([0, np.pi*2/3, np.pi*4/3])
 
-        inverse_interp_matrix = np.array([
-                    [np.sqrt(2)/3, np.sqrt(2)/3, np.sqrt(2)/3],
-                    [2/3, -1/3, -1/3],
-                    [0, 1/np.sqrt(3), -1/np.sqrt(3)]
-                    ])
+        # inverse_interp_matrix = np.array([
+        #             [np.sqrt(2)/3, np.sqrt(2)/3, np.sqrt(2)/3],
+        #             [2/3, -1/3, -1/3],
+        #             [0, 1/np.sqrt(3), -1/np.sqrt(3)]
+        #             ])
         
-        # omega_set = [2]
-        omega_set = [1] 
+        # # omega_set = [2]
+        # omega_set = [1] 
 
-        generators_dict = {}
+        # generators_dict = {}
 
-        for i in range(dim):
-            generators_dict[f"Generator_{i}"] = {
-                'opt_interp_points': opt_interp_points,
-                'omega_set': omega_set,
-                'inverse_interp_matrix': inverse_interp_matrix
-            }
+        # for i in range(dim):
+        #     generators_dict[f"Generator_{i}"] = {
+        #         'opt_interp_points': opt_interp_points,
+        #         'omega_set': omega_set,
+        #         'inverse_interp_matrix': inverse_interp_matrix
+        #     }
 
-        # Run block coordinate descent (classical thetas)
-        x_oicd, f_x_oicd, function_values_oicd = oicd(
-            objective, generators_dict, init_x, num_iter, sigma, random_keys[exp_i],
-            problem_name=problem_name,
-            opt_goal=opt_goal, 
-            plot_subproblem=plot_subproblem,
-            cyclic_mode=cyclic_mode,
-            subproblem_iter=20,
-            solver_flag = solver_flag,
-        )
-        data_dict.update({
-            'x_oicd': x_oicd,
-            'f_x_oicd': f_x_oicd,
-            'function_values_oicd': function_values_oicd,
-        })
+        # # Run block coordinate descent (classical thetas)
+        # x_oicd, f_x_oicd, function_values_oicd = oicd(
+        #     objective, generators_dict, init_x, num_iter, sigma, random_keys[exp_i],
+        #     problem_name=problem_name,
+        #     opt_goal=opt_goal, 
+        #     plot_subproblem=plot_subproblem,
+        #     cyclic_mode=cyclic_mode,
+        #     subproblem_iter=20,
+        #     solver_flag = solver_flag,
+        # )
+        # data_dict.update({
+        #     'x_oicd': x_oicd,
+        #     'f_x_oicd': f_x_oicd,
+        #     'function_values_oicd': function_values_oicd,
+        # })
 
 
         ############################################################
-        # global setting for block coordinate descent methods
-        problem_name='tsp'
-        opt_goal='max'
-        plot_subproblem=False
-        cyclic_mode=True
+        # # global setting for block coordinate descent methods
+        # problem_name='tsp'
+        # opt_goal='max'
+        # plot_subproblem=False
+        # cyclic_mode=True
 
         # # Run block coordinate descent (classical thetas)
         # x_bcd_c, f_x_bcd_c, function_values_bcd_c = block_coordinate_descent(

@@ -1,6 +1,6 @@
 # The code is adapted from https://minatoyuichiro.medium.com/variational-quantum-factoring-using-qaoa-and-vqe-on-blueqat-29c6f4f195f1 and https://arxiv.org/pdf/1411.6758.pdf
 import argparse
-import os
+import os, shutil
 import matplotlib
 import numpy as np
 import jax
@@ -12,11 +12,13 @@ from algo.gd import gradient_descent
 from algo.rcd import random_coordinate_descent
 from utils import dump, make_dir, hamiltonian_to_matrix
 
+from algo.rcd_mini_batch import random_coordinate_descent_mini_batch
+
 # from algo.bcd import block_coordinate_descent
 # Set up configurations
 # config.update("jax_enable_x64", True)
 # matplotlib.use("Agg")  # Set the matplotlib backend to 'Agg'
-np.random.seed(42)
+# np.random.seed(42)
 
 # Number of qubits in the system
 n_qubits = 4
@@ -122,53 +124,70 @@ def main():
     # Try the gradient descent algorithm
     
     make_dir('exp/factor')
-    make_dir(f'exp/factor/dim_{dim}')
+    # make_dir(f'exp/factor/dim_{dim}')
+
+    # Check if the folder exists and delete it if it does.
+    # Note that we delete everything inside the folder
+    dir_path = f'exp/factor/lr_{lr_gd}/dim_{dim}/sigma_{sigma}'
+    if os.path.exists(dir_path):
+        shutil.rmtree(dir_path)
+        print(f"Removed existing directory: {dir_path}")
+
     random_keys = jrd.split(jrd.PRNGKey(42), repeat)
+
     for exp_i in range(repeat):
-        # Define the initial value for x
-        x = jrd.uniform(random_keys[exp_i], (dim, )) * 2 * np.pi
+        print('='*100)
+        print(f'Experiment # {exp_i} begins.')
         
-        if os.path.exists(f'exp/factor/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}/data_dict.pkl'):
-            continue
+        # Define the initial value for x
+        init_x = jrd.uniform(random_keys[exp_i], (dim, )) * 2 * np.pi
 
-        # # Run gradient descent
-        # function_values_gd, x_gd, f_x_gd, eigen_values_gd, lip_diag_values_gd = gradient_descent(objective, x, lr_gd, num_iter, sigma, random_keys[exp_i], skip_hessian=True)
+        # Initialize data_dict
+        data_dict = {}
 
-        # # Run random coordinate descent
-        # x_rcd, f_x_rcd, function_values_rcd, eigen_values_rcd, lip_diag_values_rcd = random_coordinate_descent(
-        #     objective, x, lr_rcd, num_iter, sigma, random_keys[exp_i], skip_hessian=True
-        # )
+        # if os.path.exists(f'exp/factor/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}/data_dict.pkl'):
+        #     continue
 
-        MAX_ITER_BCD = 100
-        # Run block coordinate descent
-        x_bcd, f_x_bcd, function_values_bcd, eigen_values_bcd, lip_diag_values_bcd = block_coordinate_descent(
-            objective, x, num_iter, sigma, random_keys[exp_i],
-            problem_name='factor',
-            opt_goal='max', 
-            opt_method='analytic',
-            skip_hessian=False, 
-            plot_subproblem=True,
-            cyclic_mode=False
+       ############################################################
+        # Run gradient descent
+        x_gd, f_x_gd, function_values_gd = gradient_descent(
+            objective, init_x, lr_gd, num_iter, sigma, random_keys[exp_i]
         )
+        data_dict.update({
+            'x_gd': x_gd,
+            'f_x_gd': f_x_gd,
+            'function_values_gd': function_values_gd,
+        })
+
+        # Run random coordinate descent
+        x_rcd, f_x_rcd, function_values_rcd = random_coordinate_descent(
+            objective, init_x, lr_rcd, num_iter, sigma, random_keys[exp_i], 
+            decay_step=30, decay_rate=0.85
+        )
+        data_dict.update({
+            'x_rcd': x_rcd,
+            'f_x_rcd': f_x_rcd,
+            'function_values_rcd': function_values_rcd,
+        })
+
+
+        # Run random coordinate descent - mini-batch
+
+        x_rcd_batch, f_x_rcd_batch, function_values_rcd_batch = random_coordinate_descent_mini_batch(
+            objective, init_x, lr_rcd, num_iter, sigma, random_keys[exp_i], 
+            decay_step=30, decay_rate=0.85,
+            batch_size=10
+        )
+        data_dict.update({
+            'x_rcd_batch': x_rcd_batch,
+            'f_x_rcd_batch': f_x_rcd_batch,
+            'function_values_rcd_batch': function_values_rcd_batch,
+        })
+
+        ############################################################
 
         make_dir(f'exp/factor/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}')
-        data_dict = {
-            'function_values_gd': function_values_gd,
-            'function_values_rcd': function_values_rcd,
-            'function_values_bcd': function_values_bcd,
-            'x_gd': x_gd,
-            'x_rcd': x_rcd,
-            'x_bcd': x_bcd,
-            'f_x_gd': f_x_gd,
-            'f_x_rcd': f_x_rcd,
-            'f_x_bcd': f_x_bcd,
-            'eigen_values_gd': eigen_values_gd,
-            'eigen_values_rcd': eigen_values_rcd,
-            'eigen_values_bcd': eigen_values_bcd,
-            'lip_diag_values_gd': lip_diag_values_gd,
-            'lip_diag_values_rcd': lip_diag_values_rcd,
-            'lip_diag_values_bcd': lip_diag_values_bcd,
-        }
+
 
         dump(data_dict, f'exp/factor/lr_{lr_gd}/dim_{dim}/sigma_{sigma}/exp_{exp_i}/data_dict.pkl')
 

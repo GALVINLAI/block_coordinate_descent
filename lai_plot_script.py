@@ -49,6 +49,7 @@ def collect_function_values(folder_path, experiments):
     data_lists = {
         'gd': [],
         'rcd': [],
+        'rcd_batch': [],
         'bcd_opt_rcd': [],
         'bcd_opt_rcd2': [],
         'bcd_c': [],
@@ -110,6 +111,8 @@ def plot_function_evaluations(stats, plot_path, args, data):
         times['gd'] = np.arange(len(stats['gd']['mean'])) * args.dim * 2
     if 'rcd' in stats:
         times['rcd'] = np.arange(len(stats['rcd']['mean'])) * 2
+    if 'rcd_batch' in stats:
+        times['rcd_batch'] = np.arange(len(stats['rcd_batch']['mean'])) * args.dim * 2
     if 'bcd_opt_rcd' in stats:
         times['bcd_opt_rcd'] = np.arange(len(stats['bcd_opt_rcd']['mean'])) * 3
     if 'bcd_opt_rcd2' in stats:

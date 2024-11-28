@@ -9,8 +9,11 @@ from utils import dump, make_dir, hamiltonian_to_matrix
 
 from algo.gd import gradient_descent
 from algo.rcd import random_coordinate_descent
-from algo.bcd_dev import block_coordinate_descent
-from algo.oicd import oicd
+from algo.rcd_mini_batch import random_coordinate_descent_mini_batch
+
+
+# from algo.bcd_dev import block_coordinate_descent
+# from algo.oicd import oicd
 
 # Set up configurations
 # config.update("jax_enable_x64", True)
@@ -210,30 +213,6 @@ def objective(params):
 # the final state is now stored in the 'state' variable
 print(objective(ry_angles))
 
-
-import matplotlib.pyplot as plt
-fixed_angles = ry_angles[1:]
-
-single_f = lambda x: - objective([x] + fixed_angles)
-
-# 生成第一个角度的范围
-angle_range = np.linspace(- 4 * np.pi, 4 * np.pi, 100)  # 角度范围为0到2π
-
-# 用于存储目标函数值
-single_f_values = []
-
-# 计算在不同第一个角度值下的目标函数值
-for angle in angle_range:
-    single_f_values.append(single_f(angle))  # 计算目标函数值
-
-# 绘制目标函数值随第一个角度变化的图像
-plt.plot(angle_range, single_f_values)
-plt.xlabel('First Angle (ry_angles[0])')
-plt.ylabel('single_f Value')
-plt.title('single_f Function vs First Angle')
-plt.grid(True)
-plt.show()
-
 ######################## Solver setup ########################
 
 def main():
@@ -282,51 +261,64 @@ def main():
             'function_values_rcd': function_values_rcd,
         })
 
-        ############################################################
-        # global setting for OICD
-
-        problem_name='max_cut'
-        opt_goal='max'
-        plot_subproblem=False
-        cyclic_mode=False
-        solver_flag = True
-        # solver_flag = False
-        
-        opt_interp_points = np.array([0, np.pi*2/3, np.pi*4/3])
-
-        inverse_interp_matrix = np.array([
-                    [np.sqrt(2)/3, np.sqrt(2)/3, np.sqrt(2)/3],
-                    [2/3, -1/3, -1/3],
-                    [0, 1/np.sqrt(3), -1/np.sqrt(3)]
-                    ])
-        
-        # omega_set = [2]
-        omega_set = [1]
-
-        generators_dict = {}
-
-        for i in range(dim):
-            generators_dict[f"Generator_{i}"] = {
-                'opt_interp_points': opt_interp_points,
-                'omega_set': omega_set,
-                'inverse_interp_matrix': inverse_interp_matrix
-            }
-
-        # Run block coordinate descent (classical thetas)
-        x_oicd, f_x_oicd, function_values_oicd = oicd(
-            objective, generators_dict, init_x, num_iter, sigma, random_keys[exp_i],
-            problem_name=problem_name,
-            opt_goal=opt_goal, 
-            plot_subproblem=plot_subproblem,
-            cyclic_mode=cyclic_mode,
-            subproblem_iter=20,
-            solver_flag = solver_flag,
+        # Run random coordinate descent - mini-batch
+        x_rcd_batch, f_x_rcd_batch, function_values_rcd_batch = random_coordinate_descent_mini_batch(
+            objective, init_x, lr_rcd, num_iter, sigma, random_keys[exp_i], 
+            decay_step=30, decay_rate=0.85,
+            batch_size=5
         )
         data_dict.update({
-            'x_oicd': x_oicd,
-            'f_x_oicd': f_x_oicd,
-            'function_values_oicd': function_values_oicd,
+            'x_rcd_batch': x_rcd_batch,
+            'f_x_rcd_batch': f_x_rcd_batch,
+            'function_values_rcd_batch': function_values_rcd_batch,
         })
+
+
+        # ############################################################
+        # # global setting for OICD
+
+        # problem_name='max_cut'
+        # opt_goal='max'
+        # plot_subproblem=False
+        # cyclic_mode=False
+        # solver_flag = True
+        # # solver_flag = False
+        
+        # opt_interp_points = np.array([0, np.pi*2/3, np.pi*4/3])
+
+        # inverse_interp_matrix = np.array([
+        #             [np.sqrt(2)/3, np.sqrt(2)/3, np.sqrt(2)/3],
+        #             [2/3, -1/3, -1/3],
+        #             [0, 1/np.sqrt(3), -1/np.sqrt(3)]
+        #             ])
+        
+        # # omega_set = [2]
+        # omega_set = [1]
+
+        # generators_dict = {}
+
+        # for i in range(dim):
+        #     generators_dict[f"Generator_{i}"] = {
+        #         'opt_interp_points': opt_interp_points,
+        #         'omega_set': omega_set,
+        #         'inverse_interp_matrix': inverse_interp_matrix
+        #     }
+
+        # # Run block coordinate descent (classical thetas)
+        # x_oicd, f_x_oicd, function_values_oicd = oicd(
+        #     objective, generators_dict, init_x, num_iter, sigma, random_keys[exp_i],
+        #     problem_name=problem_name,
+        #     opt_goal=opt_goal, 
+        #     plot_subproblem=plot_subproblem,
+        #     cyclic_mode=cyclic_mode,
+        #     subproblem_iter=20,
+        #     solver_flag = solver_flag,
+        # )
+        # data_dict.update({
+        #     'x_oicd': x_oicd,
+        #     'f_x_oicd': f_x_oicd,
+        #     'function_values_oicd': function_values_oicd,
+        # })
 
 
         ############################################################
