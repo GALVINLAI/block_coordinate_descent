@@ -236,7 +236,6 @@ def main():
                     [0, 1/np.sqrt(3), -1/np.sqrt(3)]
                     ])
         
-        # omega_set = [2]
         omega_set = [1] 
 
         generators_dict = {}
