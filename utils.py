@@ -2,7 +2,7 @@ import os
 import pickle  # Used for serializing and deserializing Python objects.
 import re
 from functools import reduce
-import jax.numpy as np
+import numpy as np
 
 def make_dir(path):
     """

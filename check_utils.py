@@ -1,6 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 def compare_functions(func1, func2, num_tests=100, input_range=(-10 * np.pi, 10 * np.pi), atol=1e-8, rtol=1e-5):
     """
@@ -171,3 +172,56 @@ def plot_univariate_function(true_cost_fun, indices_to_check, weights, x_range=(
     # Adjust layout and display the plots
     plt.tight_layout()
     plt.show()
+
+
+
+
+def parameter_shift_for_equidistant_frequencies(estimate_loss, weights, index, omegas, n_shot):
+    r = len(omegas)
+    x_mus = [(2 * mu - 1) * np.pi / (2 * r) for mu in range(1, 2 * r + 1)]
+    
+    # Compute the coefficients
+    coefs = np.array([(-1) ** (mu - 1) / (4 * r * np.sin(x_mus[mu - 1] / 2) ** 2) for mu in range(1, 2 * r + 1)])
+    
+    x_bar = weights[index]  # Get the current parameter value
+    evals = []
+    
+    # Perform the parameter shift
+    for mu in range(1, 2 * r + 1):
+        # Create a copy of weights to avoid modifying the original weights
+        new_weights = weights.copy()
+        new_weights[index] = x_bar + x_mus[mu - 1]
+        
+        # Compute the loss
+        evals.append(estimate_loss(new_weights, n_shot))
+    
+    # Sum the product of coefficients and computed losses
+    return np.sum(coefs * np.array(evals))    
+
+# List of Pauli operators as strings
+pauli_operators = ['I', 'X', 'Y', 'Z']
+
+def random_pauli_word_string(n):
+    # Randomly choose a Pauli operator for each qubit
+    pauli_word = ''.join(random.choice(pauli_operators) for _ in range(n))
+    
+    return pauli_word
+
+
+def find_pauli_indices(pauli_word):
+    # Initialize empty lists for X, Y, Z indices
+    x_indices = []
+    y_indices = []
+    z_indices = []
+    length = len(pauli_word)
+    
+    # Iterate through the string and track the indices of X, Y, and Z
+    for i, char in enumerate(pauli_word):
+        if char == 'X':
+            x_indices.append(length-1-i)
+        elif char == 'Y':
+            y_indices.append(length-1-i)
+        elif char == 'Z':
+            z_indices.append(length-1-i)
+    
+    return x_indices, y_indices, z_indices

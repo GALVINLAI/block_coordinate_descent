@@ -66,13 +66,39 @@ num_iter = args.num_iter
 ham_str = '600303.0 -100069.5 * z0 -100055.5 * z4 + 12.0 * z4 * z0 -100069.5 * z1 -100055.5 * z5 + 12.0 * z5 * z1 -100069.5 * z2 -100055.5 * z3 + 12.0 * z3 * z2 -100077.0 * z7 + 22.75 * z7 * z0 -100077.0 * z8 + 22.75 * z8 * z1 -100077.0 * z6 + 22.75 * z6 * z2 + 12.0 * z3 * z1 + 12.0 * z4 * z2 + 12.0 * z5 * z0 + 15.75 * z7 * z3 + 15.75 * z8 * z4 + 15.75 * z6 * z5 + 22.75 * z6 * z1 + 22.75 * z7 * z2 + 22.75 * z8 * z0 + 15.75 * z6 * z4 + 15.75 * z7 * z5 + 15.75 * z8 * z3 + 50000.0 * z3 * z0 + 50000.0 * z6 * z0 + 50000.0 * z6 * z3 + 50000.0 * z4 * z1 + 50000.0 * z7 * z1 + 50000.0 * z7 * z4 + 50000.0 * z5 * z2 + 50000.0 * z8 * z2 + 50000.0 * z8 * z5 + 50000.0 * z1 * z0 + 50000.0 * z2 * z0 + 50000.0 * z2 * z1 + 50000.0 * z4 * z3 + 50000.0 * z5 * z3 + 50000.0 * z5 * z4 + 50000.0 * z7 * z6 + 50000.0 * z8 * z6 + 50000.0 * z8 * z7'
 H = hamiltonian_to_matrix(ham_str)
 
-print(jnp.linalg.eigh(H)[0][0])
-print(jnp.nonzero(jnp.linalg.eigh(H)[1][:, 0]))
-print(bin(int(jnp.nonzero(jnp.linalg.eigh(H)[1][:, 0])[0][0]))[2:])
 
+print(jnp.linalg.eigh(H)[0][0]) # Smallest eigenvalue of the Hamiltonian
+print(jnp.nonzero(jnp.linalg.eigh(H)[1][:, 0])) # index of nonzero entry of (eigenvector corresponding to smallest eigenvalue)
+
+
+
+print(bin(int(jnp.nonzero(jnp.linalg.eigh(H)[1][:, 0])[0][0]))[2:])
 ans = list(str(bin(int(jnp.nonzero(jnp.linalg.eigh(H)[1][:, 0])[0][0]))[2:]))[::-1]
 ans = jnp.array([int(i) for i in ans] + [0] * (9 - len(ans)))
 print(ans)
+
+# Step 1: Calculate the eigenvalues and eigenvectors once
+eigenvalues, eigenvectors = jnp.linalg.eigh(H)
+
+# Step 2: Get the smallest eigenvalue
+smallest_eigenvalue = eigenvalues[0]
+print(smallest_eigenvalue)
+
+# Step 3: Get the index of the nonzero entry of the eigenvector corresponding to the smallest eigenvalue
+first_eigenvector = eigenvectors[:, 0]
+nonzero_indices = jnp.nonzero(first_eigenvector)
+print(nonzero_indices)
+
+# Step 4: Get the binary representation of the first nonzero index (reversed)
+first_nonzero_index = int(nonzero_indices[0][0])
+binary_representation = list(str(bin(first_nonzero_index)[2:]))[::-1] # [::-1] reverse a sequence
+
+# Step 5: Pad with zeros to ensure the length is 9 and convert to an array of integers
+ans = jnp.array([int(i) for i in binary_representation] + [0] * (9 - len(binary_representation)))
+
+# Step 6: Print the result
+print(ans)
+
 
 def get_tsp_solution(x):
     """Get graph solution from binary string.
