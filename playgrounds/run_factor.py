@@ -6,7 +6,7 @@ import numpy as onp
 from jax.scipy.linalg import expm
 from tqdm import trange
 
-from utils import make_dir, dump, hamiltonian_to_matrix
+from algo.utils import make_dir, dump, hamiltonian_to_matrix
 
 
 # Number of qubits in the system

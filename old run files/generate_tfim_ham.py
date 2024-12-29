@@ -3,7 +3,7 @@ import numpy as np
 import scipy.linalg as la
 from quspin.basis import spin_basis_1d
 from quspin.operators import hamiltonian
-from utils import dump, make_dir
+from algo.utils import dump, make_dir
 
 # Set the random seed for reproducibility
 np.random.seed(42)

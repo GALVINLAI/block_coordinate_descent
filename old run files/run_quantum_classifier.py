@@ -6,7 +6,7 @@ from hpman.m import _
 import hpargparse
 import argparse
 
-from utils import make_dir, dump
+from algo.utils import make_dir, dump
 import numpy as np
 import random
 

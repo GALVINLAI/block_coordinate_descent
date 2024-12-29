@@ -1,22 +1,28 @@
 import numpy as np
+import time
 import matplotlib.pyplot as plt
+import scipy.optimize as sciopt
 from scipy.optimize import minimize
 from IPython.display import clear_output
 from tqdm import trange
+from tqdm.auto import tqdm
 from algo.utils_qiskit import plot_every_iteration
 
 
 def oicd(estimate_loss_fun,
          expectation_loss,
-         fidelity,   
-         n_shot, weights_dict, init_weights, num_iters,
+         fidelity, 
+         n_shot, weights_dict, init_weights, num_iter,
          cyclic_mode=False,
          use_pratical_interp_flag=True,
-         use_solvers_flag=True, # False only for all omegas = [1]
-         subproblem_method='CG',
-         subproblem_iter=20,
-         exact_mode=False,
+         use_local_solvers_flag=True, 
+         use_global_solvers_flag = False,
+         subproblem_method='BFGS',
+         subproblem_iter=None,
+         use_exact_update_frequencey_1_flag = False, # True only for all omegas = [1]
+         exact_mode=False, # for testing purpose, no noisy loss
          plot_flag=False,
+         plot_argmin_flag = False,
          ):
     """
     Optimize VQA's weights using the Optimal Interpolation Coordinate Descent (OICD) method.
@@ -28,10 +34,10 @@ def oicd(estimate_loss_fun,
         n_shot (int): The number of samples used for loss estimation.
         weights_dict (dict): A dictionary of weights, containing different weights with their corresponding omega values and interpolation nodes.
         init_weights (numpy.ndarray): The initial weights.
-        num_iters (int): The number of iterations.
+        num_iter (int): The number of iterations.
         cyclic_mode (bool, optional): Whether to enable cyclic mode, i.e., updating weights sequentially during each iteration. Defaults to False.
         use_pratical_interp_flag (bool, optional): Whether to use the practical OICD method (Algorithm 3 from the paper). Defaults to True.
-        use_solvers_flag (bool, optional): Whether to use optimization solvers to solve the subproblems. Can be set to False when omega = [1]. Defaults to True.
+        use_local_solvers_flag (bool, optional): Whether to use optimization solvers to solve the subproblems. Can be set to False when omega = [1]. Defaults to True.
         subproblem_method (str, optional): The method for solving the subproblems, such as 'CG' (Conjugate Gradient). Defaults to 'CG'.
         subproblem_iter (int, optional): The number of iterations for solving each subproblem. Defaults to 20.
 
@@ -53,17 +59,21 @@ def oicd(estimate_loss_fun,
     best_loss = true_loss
     fun_calling_count = 1
     fid = fidelity(weights)
+    best_fid = fid
     approx_loss_value = true_loss
 
     expected_record_value = [true_loss]
     best_expected_record_value = [best_loss]   
     func_count_record_value= [fun_calling_count]
     fidelity_record_value = [fid]
-    approx_record_value = [approx_loss_value]
+    best_fid_record_value = [best_fid]   
+    # approx_record_value = [approx_loss_value]
 
     print("-"*100)
     
-    t = trange(num_iters, desc="Bar desc", leave=True)
+    t = trange(num_iter, desc="Bar desc", leave=True)
+    # t = tqdm(range(num_iter), desc="Bar desc", leave=True)
+
     m = len(weights)
 
     for i in t:
@@ -93,7 +103,7 @@ def oicd(estimate_loss_fun,
                 fun_vals.append(fun_val)
             fun_vals = np.array(fun_vals)
             reco_coef = E_s_inv @ (inv_A @ fun_vals)
-            fun_calling_count += (2*len(omegas) - 1)
+            fun_calling_count += 2*len(omegas) 
         else:
             #  Vanilla OICD Method in Algorithm 2 in paper
             fun_vals = []
@@ -104,7 +114,7 @@ def oicd(estimate_loss_fun,
                 fun_vals.append(fun_val)
             fun_vals = np.array(fun_vals)
             reco_coef = inv_A @ fun_vals
-            fun_calling_count += 2*len(omegas)
+            fun_calling_count += (2*len(omegas)+1)
             
         # construct the approximate loss function
         r= len(omegas)
@@ -113,40 +123,101 @@ def oicd(estimate_loss_fun,
             trig_x_term = np.array([1 / np.sqrt(2)] + [func(omegas[k] * x).item() for k in range(r) for func in (np.cos, np.sin)])
             return np.dot(trig_x_term, reco_coef)
         
-        def approx_loss_grad(x):
-            trig_x_term = np.array([0] + [omegas[k] * func(omegas[k] * x).item() for k in range(r) for func in (lambda z: -np.sin(z), np.cos)])
-            return np.dot(trig_x_term, reco_coef)
-
-        def approx_loss_hess(x):
-            trig_x_term = np.array([0] + [(omegas[k]**2) * func(omegas[k] * x).item() for k in range(r) for func in (lambda z: -np.cos(z), lambda z: -np.sin(z))])
-            return np.dot(trig_x_term, reco_coef)
-               
         # solve the subproblem: min approx_loss(x)
-        if use_solvers_flag: 
+        if use_local_solvers_flag:
+
+            def approx_loss_grad(x):
+                trig_x_term = np.array([0] + [omegas[k] * func(omegas[k] * x).item() for k in range(r) for func in (lambda z: -np.sin(z), np.cos)])
+                return np.dot(trig_x_term, reco_coef)
+
+            def approx_loss_hess(x):
+                trig_x_term = np.array([0] + [(omegas[k]**2) * func(omegas[k] * x).item() for k in range(r) for func in (lambda z: -np.cos(z), lambda z: -np.sin(z))])
+                return np.dot(trig_x_term, reco_coef)
+    
             # use optimization solvers for subproblem
             options = {'maxiter': subproblem_iter,
-                       'method' : subproblem_method,
                        'disp': False}
+            
             # IMPORTANT TIP: initial guess is set as the current coordinate value
             x0 = weights.copy()[j]
+
+            # reference: 
             # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
-            # The default method is BFGS.
+            
             # minimize can receive gradient and hessian           
             result = minimize(approx_loss, 
                               x0,
+                              method = subproblem_method,
                               jac=approx_loss_grad,
-                              hess=approx_loss_hess,
+                            #   hess=approx_loss_hess, # 'Newton-CG 或 'trust-constr
                               options=options)
-            # obtain the solution and loss value
+            
             updated_weight = result.x.item() 
+            approx_loss_value = result.fun 
+
+        elif use_global_solvers_flag:
+            
+            # IMPORTANT TIP: initial guess is set as the current coordinate value
+            x0 = weights.copy()[j]
+
+            # Define bounds for the global optimizer
+            # WARNING: this used the 2pi periodicity, only for equidistant frequency
+            bounds = [(x0-np.pi, x0+np.pi)]
+
+            # According to method, some need x0 or not, some need bounds or not.
+            # reference: 
+            # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
+            
+            # Use global optimization solver
+            result = sciopt.differential_evolution(approx_loss, 
+                                                   bounds, 
+                                                   strategy='best1bin', 
+                                                   maxiter=subproblem_iter, 
+                                                   disp=False)
+
+            updated_weight = result.x.item()
             approx_loss_value = result.fun
-        else:
+
+        elif use_exact_update_frequencey_1_flag:
+            
+            factor = weights_dict[f'weights_{j}']['scale_factor']
+            if len(omegas) != 1:
+                raise ValueError(
+                    f"Error: len(omegas) = {len(omegas)} is not equal to 1. `use_exact_update_frequencey_1_flag` cannot be True in this case."
+                )
+
+            x0 = weights.copy()[j]
+
+            # we directly compute the analytical solution, 
             # only for case of omega = [1]
-            # we directly compute the analytical solution
+        
             a = reco_coef[0]/np.sqrt(2)
             b = reco_coef[1]
             c = reco_coef[2]
             updated_weight, approx_loss_value = update_for_frequency_1(a, b, c, approx_loss)
+            updated_weight = updated_weight / factor
+            
+        if plot_argmin_flag and i % 10 == 0:
+
+            # Plot the approx_loss function
+            x_vals = np.linspace(x0 - np.pi, x0 + np.pi, 500)  # Range of x values for plotting
+            y_vals = np.array([approx_loss(x) for x in x_vals])
+
+            plt.figure(figsize=(10, 6))
+            plt.plot(x_vals, y_vals, label="approx_loss(x)", color="blue")
+            plt.scatter(x0, approx_loss(x0), color="green", label="Initial Point", zorder=5)
+            plt.scatter(updated_weight, approx_loss(updated_weight), color="red", label="Optimal Point", zorder=5)
+            plt.title("Approx Loss Function")
+            plt.xlim(x0 - np.pi, x0 + np.pi)
+            plt.xlabel("x")
+            plt.ylabel("approx_loss(x)")
+            plt.legend()
+            plt.grid()
+            plt.show()
+
+            # Insert a delay of 1 second before showing the plot
+            time.sleep(2)
+
     
         weights[j] = updated_weight
 
@@ -155,35 +226,55 @@ def oicd(estimate_loss_fun,
         if true_loss < best_loss:
             best_loss = true_loss
             best_weights = weights.copy()
+
         fid = fidelity(weights)
-        
+        if fid > best_fid:
+            best_fid = fid
+
         expected_record_value.append(true_loss)
         best_expected_record_value.append(best_loss)
         func_count_record_value.append(fun_calling_count)
         fidelity_record_value.append(fid)
-        approx_record_value.append(approx_loss_value)
+        best_fid_record_value.append(best_fid)
+        # approx_record_value.append(approx_loss_value)
     
-        message = f"Iter: {i} - Coord: {j}({m}), Best loss: {best_loss}, True loss: {true_loss}, Fidelity: {fid}"
+        message = f"Iter: {i}, {j}({m}), Best loss: {best_loss:.4f}, Cur. loss: {true_loss:.4f}, Best Fid.: {best_fid:.4f}, Cur. Fid.: {fid:.4f}"
+        # message = {
+        #     "Algo": f"[{name}]",
+        #     "Iter": f"{i}",
+        #     "Cord": f"{j}({m})",
+        #     "Best Loss": f"{best_loss:.4f}",
+        #     "Cur. Loss": f"{true_loss:.4f}",
+        #     "Best Fid.": f"{best_fid:.4f}",
+        #     "Cur. Fid.": f"{fid:.4f}"
+        # }
+        
         t.set_description(f"[{name}] %s" % message)
+        # t.set_description(message)
+        # t.set_postfix(message)
         t.refresh()
 
         if plot_flag:
-            # plot_every_iteration(expected_record_value, fidelity_record_value, name, approx_record_value)
-            # plot_every_iteration(expected_record_value, fidelity_record_value, name)
-            plot_every_iteration(best_expected_record_value, fidelity_record_value, name)
+            plot_every_iteration(expected_record_value, fidelity_record_value, name)
+            # plot_every_iteration(best_expected_record_value, fidelity_record_value, name)
+            # plot_every_iteration(best_expected_record_value, best_fid_record_value, name)
 
-    return best_weights, best_expected_record_value, fidelity_record_value, func_count_record_value
+        if np.abs(fid - 1) < 1e-3:
+            break
+        
+    return best_weights, best_expected_record_value, best_fid_record_value, func_count_record_value, expected_record_value, fidelity_record_value
+
 
 
 def update_for_frequency_1(a, b, c, approx_loss):
     """
     Update the weight for the case of omega = [1].
     the cost function has form: a + b*cos(x) + c*sin(x),
-    its global extrema is comptuted as follows.
+    its global minimizer is comptuted as follows.
     
-    In general, the extrema of the function a + b*cos(x) + c*sin(x) is
+    In general, the minimizer of the function a + b*cos(x) + c*sin(x) is
     given by the arctan(c/b).
-    but when case of b=0 or c=0, the extrema is any value.
+    but when case of b=0 or c=0, the minimizer is any value.
     """
 
     # The goal here is to find the analytic solution of approx_loss, not exact_single_var_fun
@@ -216,61 +307,6 @@ def update_for_frequency_1(a, b, c, approx_loss):
     return updated_weight, approx_loss_value
 
 
-# def update_for_frequency_1(a, b, c, approx_loss):
-#     """
-#     Update the weight for the case of omega = [1].
-#     the cost function has form: a + b*cos(x) + c*sin(x),
-#     its global extrema is comptuted as follows.
-    
-#     In general, the extrema of the function a + b*cos(x) + c*sin(x) is
-#     given by the arctan(c/b).
-#     but when case of b=0 or c=0, the extrema is any value.
-#     """
-
-#     # The goal here is to find the analytic solution of approx_loss, not exact_single_var_fun
-#     # And the solution should be within 0 to 2*pi
-
-#     if np.isclose(b, 0) and np.isclose(c, 0):
-#         # Constant function. Any value is an extrema, so it remains unchanged.
-#         updated_weight = 0.0
-#     elif np.isclose(b, 0) and not np.isclose(c, 0):
-#         # sin function, extrema influenced by amplitude c
-#         if opt_goal == 'max':
-#             updated_weight = (np.pi / 2) if c > 0 else (3 * np.pi / 2)
-#         elif opt_goal == 'min':
-#             updated_weight = (3 * np.pi / 2) if c > 0 else (np.pi / 2)
-#     elif np.isclose(c, 0) and not np.isclose(b, 0):
-#         # cos function, extrema influenced by amplitude b
-#         if opt_goal == 'max':
-#             updated_weight = 0.0 if b > 0 else np.pi
-#         elif opt_goal == 'min':
-#             updated_weight = np.pi if b > 0 else 0.0
-#     else: # not np.isclose(c, 0) and not np.isclose(b, 0)
-#         updated_weight = np.arctan(c / b)
-#         IS_MAXIMIZER = approx_loss(updated_weight) > a
-#         IS_POSITIVE = updated_weight > 0
-#         if opt_goal == 'max':
-#             if IS_POSITIVE:
-#                 if not IS_MAXIMIZER:
-#                     updated_weight += np.pi
-#             else:
-#                 if IS_MAXIMIZER:
-#                     updated_weight += 2 * np.pi
-#                 else:
-#                     updated_weight += np.pi
-#         elif opt_goal == 'min':
-#             if IS_POSITIVE:
-#                 if IS_MAXIMIZER:
-#                     updated_weight += np.pi
-#             else:
-#                 if IS_MAXIMIZER:
-#                     updated_weight += np.pi
-#                 else:
-#                     updated_weight += 2 * np.pi
-    
-#     approx_loss_value = approx_loss(updated_weight)
-
-#     return updated_weight, approx_loss_value
 
 def construct_Es_inv(s, omegas):
     """

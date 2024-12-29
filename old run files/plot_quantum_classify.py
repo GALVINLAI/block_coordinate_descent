@@ -3,7 +3,7 @@
 
 import pickle
 import matplotlib.pyplot as plt
-from utils import make_dir, load
+from algo.utils import make_dir, load
 from glob import glob
 import numpy as np
 class OptimizerLog:

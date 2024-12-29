@@ -27,7 +27,7 @@ nice_fonts = {
 matplotlib.rcParams.update(nice_fonts)
 
 import os
-from utils import load, make_dir
+from algo.utils import load, make_dir
 import numpy as np
 import argparse
 from glob import glob

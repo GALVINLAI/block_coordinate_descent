@@ -7,9 +7,9 @@ import jax
 import jax.numpy as jnp
 import jax.numpy.linalg as jla
 import jax.random as jrd
-from utils import load, dump, make_dir
-from algo.gd import gradient_descent
-from algo.rcd import random_coordinate_descent
+from algo.utils import load, dump, make_dir
+from algo.old.gd import gradient_descent
+from algo.old.rcd import random_coordinate_descent
 # from algo.bcd import block_coordinate_descent
 
 # Set up configurations

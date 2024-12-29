@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 from quspin.basis import spin_basis_1d
 from quspin.operators import hamiltonian
-from utils import dump, make_dir
+from algo.utils import dump, make_dir
 
 np.random.seed(42)
 

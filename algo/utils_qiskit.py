@@ -1,29 +1,61 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
+from scipy.optimize import differential_evolution
+import os
+import pickle
 
-def parameter_shift_for_equidistant_frequencies(estimate_loss, weights, index, omegas):
+# def parameter_shift_for_equidistant_frequencies(estimate_loss, weights, index, R):
+#     # r = max(omegas)
+#     # r = len(omegas)
+
+#     r = R
+#     x_mus = [(2 * mu - 1) * np.pi / (2 * r) for mu in range(1, 2 * r + 1)]
+    
+#     # Compute the coefficients
+#     coefs = np.array([(-1) ** (mu - 1) / (4 * r * np.sin(x_mus[mu - 1] / 2) ** 2) for mu in range(1, 2 * r + 1)])
+    
+#     x_bar = weights[index]  # Get the current parameter value
+#     evals = []
+    
+#     # Perform the parameter shift
+#     for mu in range(1, 2 * r + 1):
+#         # Create a copy of weights to avoid modifying the original weights
+#         new_weights = weights.copy()
+#         new_weights[index] = x_bar + x_mus[mu - 1]
+        
+#         # Compute the loss
+#         evals.append(estimate_loss(new_weights))
+    
+#     # Sum the product of coefficients and computed losses
+#     return np.sum(coefs * np.array(evals))    
+
+
+def parameter_shift_for_equidistant_frequencies(estimate_loss, weights, index, omegas, factor=1.0):
+    # r = max(omegas)
+    # r = len(omegas)
+
     r = len(omegas)
+
     x_mus = [(2 * mu - 1) * np.pi / (2 * r) for mu in range(1, 2 * r + 1)]
     
     # Compute the coefficients
     coefs = np.array([(-1) ** (mu - 1) / (4 * r * np.sin(x_mus[mu - 1] / 2) ** 2) for mu in range(1, 2 * r + 1)])
     
-    x_bar = weights[index]  # Get the current parameter value
+    x_bar = weights[index] * factor  # Get the current parameter value
     evals = []
     
     # Perform the parameter shift
     for mu in range(1, 2 * r + 1):
         # Create a copy of weights to avoid modifying the original weights
         new_weights = weights.copy()
-        new_weights[index] = x_bar + x_mus[mu - 1]
+        new_weights[index] = (x_bar + x_mus[mu - 1]) / factor
         
         # Compute the loss
         evals.append(estimate_loss(new_weights))
     
     # Sum the product of coefficients and computed losses
-    return np.sum(coefs * np.array(evals))    
-
+    return np.sum(coefs * np.array(evals)) * factor
 
 def plot_every_iteration(expected_record_value, fidelity_record_value, name, approx_record_value=[]):
     
@@ -34,7 +66,8 @@ def plot_every_iteration(expected_record_value, fidelity_record_value, name, app
 
     # Plot Approx Loss and True Loss on the first subplot
     # if approx_record_value is not None:
-    axs[0].plot(approx_record_value, label='Approx Loss')
+    if len(approx_record_value) > 0:
+        axs[0].plot(approx_record_value, label='Approx Loss')
     axs[0].plot(expected_record_value, label='True Loss')
     axs[0].set_xlabel('Iteration')
     axs[0].set_title(f'{name} Loss')
@@ -159,3 +192,91 @@ def find_pauli_indices(pauli_word):
             z_indices.append(length-1-i)
     
     return x_indices, y_indices, z_indices
+
+
+
+# Interpolation matrix generation function
+def interp_matrix(interp_points, Omegas):
+    r = len(Omegas)
+    return np.array([[1/np.sqrt(2)] + [func(Omegas[k] * x) for k in range(r) for func in (np.cos, np.sin)] for x in interp_points])
+
+# Mean Squared Error (MSE) function
+def mse(interp_points, Omegas):
+    # Create interpolation matrix
+    A = interp_matrix(interp_points, Omegas)
+    
+    # Regularize the matrix
+    regularized_matrix = A.T @ A + 1e-6 * np.eye(A.shape[1])  # Add a small regularization term to avoid singular matrix
+    
+    # Return the trace of the inverse of the matrix
+    return np.trace(np.linalg.inv(regularized_matrix))
+
+# Define the optimization function
+def optimal_interp_points(Omegas): 
+    r = len(Omegas)
+
+    # Define the bounds for the interpolation points
+    # bounds = [(-1e6, 1e6) for _ in range(2 * r + 1)]  # This is a loose boundary range
+    bounds = [(0, 2*np.pi) for _ in range(2 * r + 1)]
+
+    # Use differential evolution for optimization
+    result_mse = differential_evolution(mse, bounds, args=(Omegas,), strategy='best1bin', maxiter=1000)
+
+    opt_mse = result_mse.fun
+
+    # Get the optimized interpolation points
+    opt_interp_points = sorted(result_mse.x)
+
+    # Return the optimized interpolation points and the inverse of the corresponding interpolation matrix
+    return opt_mse, opt_interp_points, np.linalg.inv(interp_matrix(opt_interp_points, Omegas))
+
+
+def make_dir(path):
+    """
+    Create a new directory if it does not exist.
+
+    Parameters:
+    path (str): The path of the directory to create.
+    """
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
+        # The parameter exist_ok=True indicates that if the directory already exists, no error will be raised, and the operation will be simply ignored.
+
+def load(filename):
+    """
+    Load data from a pickle file.
+
+    Parameters:
+    filename (str): The name of the pickle file.
+
+    Returns:
+    loaded: The data loaded from the pickle file.
+    """
+    assert filename.endswith('.pkl'), "File must be a '.pkl' file"
+    
+    with open(filename, 'rb') as file:
+        # The 'rb' parameter indicates opening the file in binary read mode, which is necessary for reading pickle files.
+        loaded = pickle.load(file)
+        
+    return loaded
+
+def dump(content, filename):
+    """
+    Save data to a pickle file.
+
+    Parameters:
+    content : The data to be saved.
+    filename (str): The name of the pickle file.
+    """
+    assert filename.endswith('.pkl'), "File must be a '.pkl' file"
+    
+    with open(filename, 'wb') as file:
+        # The 'wb' parameter indicates opening the file in binary write mode, which is necessary for writing pickle files.
+        pickle.dump(content, file, protocol=pickle.HIGHEST_PROTOCOL)
+        # The parameter protocol=pickle.HIGHEST_PROTOCOL specifies using the highest protocol version to ensure the serialized data can be compatible with future Python versions.
+
+
+def interp_matrix(interp_points, Omegas):
+    r = len(Omegas)
+    return np.array([[1/np.sqrt(2)] + [func(Omegas[k] * x) for k in range(r) for func in (np.cos, np.sin)] for x in interp_points])
+

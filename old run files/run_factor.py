@@ -8,9 +8,9 @@ import jax.numpy as jnp
 import jax.random as jrd
 # from jax.config import config
 from jax.scipy.linalg import expm
-from algo.gd import gradient_descent
-from algo.rcd import random_coordinate_descent
-from utils import dump, make_dir, hamiltonian_to_matrix
+from algo.old.gd import gradient_descent
+from algo.old.rcd import random_coordinate_descent
+from algo.utils import dump, make_dir, hamiltonian_to_matrix
 
 # from algo.bcd import block_coordinate_descent
 # Set up configurations

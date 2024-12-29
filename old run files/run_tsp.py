@@ -5,14 +5,14 @@ import numpy as np
 import jax
 import jax.numpy as jnp
 import jax.random as jrd
-from algo.gd import gradient_descent
-from algo.rcd import random_coordinate_descent
-from utils import dump, make_dir, hamiltonian_to_matrix
+from algo.old.gd import gradient_descent
+from algo.old.rcd import random_coordinate_descent
+from algo.utils import dump, make_dir, hamiltonian_to_matrix
 
-from algo.gd import gradient_descent
-from algo.rcd import random_coordinate_descent
-from algo.bcd_dev import block_coordinate_descent
-from algo.oicd import oicd
+from algo.old.gd import gradient_descent
+from algo.old.rcd import random_coordinate_descent
+from algo.old.bcd_dev import block_coordinate_descent
+from algo.old.oicd import oicd
 
 # Set up configurations
 matplotlib.use("Agg")  # Set the matplotlib backend to 'Agg'

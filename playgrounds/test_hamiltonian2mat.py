@@ -1,7 +1,7 @@
 import sys
 sys.path.append("..") # Adds higher directory to python modules path.
 import jax.numpy as np
-from utils import hamiltonian_to_matrix
+from algo.utils import hamiltonian_to_matrix
 
 
 

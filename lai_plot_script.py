@@ -6,9 +6,10 @@ import os
 import numpy as np
 import argparse
 from glob import glob
-from utils import load, make_dir
+from algo.utils_qiskit import load
+import pickle
 
-fontsize = 12
+fontsize = 20
 nice_fonts = {
     "font.family": "serif",
     "axes.labelsize": fontsize,
@@ -18,146 +19,201 @@ nice_fonts = {
     "ytick.labelsize": fontsize,
 }
 matplotlib.rcParams.update(nice_fonts)
-colors = ['r', 'b', 'k', 'g', 'm', 'c', 'y', 'orange', 'purple', 'brown']
+# colors = ['r', 'b', 'k', 'g', 'm', 'c', 'y', 'orange', 'purple', 'brown']
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--phys', type=str, default='tsp', help='The physics system to be studied')
-    parser.add_argument('--lr', type=float, default=0.0001, help='The learning rate for gd')
-    parser.add_argument('--dim', type=int, default=20, help='The dimensionality of the data')
-    parser.add_argument('--sigma', type=float, default=0.1, help='The standard deviation of the Gaussian noise')
-    parser.add_argument('--x_lim', type=int, default=-1, help='The x-axis limit for the plots')
+    parser.add_argument('--phys', type=str, default='QAOA_XXZ_Wiersema', 
+                        help='The physics system to be studied')
+    parser.add_argument('--N', type=int, default=4, 
+                        help='System size')
+    parser.add_argument('--layer', type=int, default=2, 
+                        help='The physics system to be studied')
+    parser.add_argument('--Delta', type=float, default=0.5, 
+                         help='The dimension of the problem')
+    parser.add_argument('--repeat', type=int, default=3, 
+                        help='The number of times to repeat the experiment')
+    parser.add_argument('--x_lim_coff', type=float, default=6, 
+                        help='The x-axis limit for the plots')
+    parser.add_argument('--y_lim', type=float, default=0, 
+                        help='The y-axis limit for the plots')
     return parser.parse_args()
 
-def setup_directories(args):
-    folder_path = f'exp/{args.phys}/lr_{args.lr}/dim_{args.dim}/sigma_{args.sigma}'
-    plot_path = f'plots/{args.phys}/lr_{args.lr}/dim_{args.dim}/sigma_{args.sigma}'
-    if os.path.exists(plot_path):
-        shutil.rmtree(plot_path)
-        print(f"Removed existing directory: {plot_path}")
-    make_dir(plot_path)
-    return folder_path, plot_path
+# Utility functions
+def load_data(file_path):
+    """Load data from a given file path."""
+    data = load(file_path)  # Assuming 'load' is a predefined function
+    for key in data.keys():
+        data[key] = np.real(np.array(data[key]))
+    return data
 
-def load_experiments(folder_path):
-    num_exp = len(glob(f'{folder_path}/exp_*'))
-    return [f'exp_{i}' for i in range(num_exp)]
+def calculate_statistics(all_data):
+    """Calculate mean and std for loss data."""
+    MEANS = {key: np.mean(values, axis=0) for key, values in all_data.items()}
+    STDS = {key: np.std(values, axis=0) for key, values in all_data.items()}
+    MAX = {key: np.max(values, axis=0) for key, values in all_data.items()}
+    MIN = {key: np.min(values, axis=0) for key, values in all_data.items()}
+    return MEANS, STDS, MAX, MIN
 
-def process_data(dataset, data_type):
-    return np.array(dataset[f'function_values_{data_type}'])
+def plot_loss(function_calls_mean, MEANS, STDS, plot_path, fig_prefix, plot_xlim, args, showwhat='energy'):
+    """Plot the loss data with mean and std."""
+    plt.figure()
+    for key, color in zip(MEANS.keys(), colors[:len(MEANS)]):
+        plt.plot(function_calls_mean[key], MEANS[key], linewidth=3, color=color, label=key.upper())
+        lower = MEANS[key] - STDS[key]
+        upper = MEANS[key] + STDS[key]
+        upper[upper > 1] = 1
+        plt.fill_between(
+            function_calls_mean[key], 
+            lower, 
+            upper, 
+            color=color, alpha=0.2
+        )
 
-def collect_function_values(folder_path, experiments):
-    data_lists = {
-        'gd': [],
-        'rcd': [],
-        'bcd_opt_rcd': [],
-        'bcd_opt_rcd2': [],
-        'bcd_c': [],
-        'bcd_g': [],
-        'bcd_reg': [],
-        'bcd_random_thetas': [],
-        'bcd_robust': [],
-        'oicd': []
-    }
-    
-    for experiment in experiments:
-        file_path = os.path.join(folder_path, experiment, 'data_dict.pkl')
-        data = load(file_path)
-        for key in data.keys():
-            data[key] = np.array(data[key])
+    plt.xlabel('Number of Function Evaluations')
+    if showwhat == 'best_expected':
+        plt.ylabel('Best Energy ratio: $E / E_{ground}$')
+    elif showwhat == 'best_fid':
+        plt.ylabel('Best Fidelity')
+    elif showwhat == 'every_expected':
+        plt.ylabel('Energy ratio: $E / E_{ground}$')
+    elif showwhat == 'every_fid':
+        plt.ylabel('Fidelity')
+
+    plt.legend(fontsize=18)
+    plt.xlim(0, plot_xlim * args.x_lim_coff if args.x_lim_coff > 0 else plot_xlim)
+    plt.ylim(args.y_lim, 1.05)
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(os.path.join(plot_path, fig_prefix + showwhat + '_fun_evals.png'))
+    plt.clf()
+
+def pad_to_length(arr, target_length, padding_value=np.nan):
+    """Pads the array to the target length with the padding value."""
+    if len(arr) < target_length:
+        padding = np.full(target_length - len(arr), padding_value)
+        return np.concatenate([arr, padding])
+    return arr
+
+def pad_to_length_func(arr, target_length, algo, weights_dict):
+    """Pads the array to the target length starting from the last element, with different increments based on `algo`."""
+
+    padding_length = target_length - len(arr)
+    padding = np.array([])
+
+    num_p = len(weights_dict)
+    one_gd = sum( 2*len(weights_dict[f'weights_{j}']['omegas']) for j in range(num_p))
+
+    for _ in range(padding_length):
         
-        for key in list(data_lists.keys()):
-            if f'function_values_{key}' in data:
-                data_lists[key].append(process_data(data, key))
-            else:
-                data_lists.pop(key)
+        if algo == "gd":
+            d = one_gd
+        elif algo == "rcd":
+            d = 2*len(weights_dict[f'weights_{np.random.choice(num_p)}']['omegas'])
+        elif algo == "oicd":
+            d = 2*len(weights_dict[f'weights_{np.random.choice(num_p)}']['omegas'])
+        else:
+            raise ValueError(f"Unknown algorithm: {algo}")
+        
+        if len(padding) == 0:
+            padding = np.array([arr[-1] + d])
+        else:
+            padding = np.append(padding, padding[-1] + d)
     
-    return {key: pd.DataFrame(values) for key, values in data_lists.items()}
+    return np.concatenate([arr, padding])
 
-def calculate_mean_std(dataframes):
-    stats = {}
-    for key, df in dataframes.items():
-        stats[key] = {
-            'mean': np.array(df.mean(), dtype=float),
-            'std': np.array(df.std(), dtype=float)
-        }
-    return stats
-
-def plot_energy_ratio(stats, plot_path, x_lim):
-    plt.figure()
-    for key, color in zip(stats.keys(), colors[:len(stats)]):
-        plt.plot(stats[key]['mean'], color=color, label=key.upper())
-        plt.fill_between(
-            range(len(stats[key]['mean'])), 
-            stats[key]['mean'] - stats[key]['std'], 
-            stats[key]['mean'] + stats[key]['std'], 
-            color=color, alpha=0.2
-        )
-    plt.title('Energy Ratio')
-    plt.xlabel('Iterations')
-    plt.ylabel('Energy ratio: $E / E_{GS}$')
-    plt.legend()
-    if x_lim > 0:
-        plt.xlim(0, x_lim)
-    plt.grid()
-    plt.tight_layout()
-    plt.savefig(f'{plot_path}/energy_HM.png')
-    plt.clf()
-
-def plot_function_evaluations(stats, plot_path, args, data):
-    plt.figure()
-    times = {}
-    if 'gd' in stats:
-        times['gd'] = np.arange(len(stats['gd']['mean'])) * args.dim * 2
-    if 'rcd' in stats:
-        times['rcd'] = np.arange(len(stats['rcd']['mean'])) * 2
-    if 'bcd_opt_rcd' in stats:
-        times['bcd_opt_rcd'] = np.arange(len(stats['bcd_opt_rcd']['mean'])) * 3
-    if 'bcd_opt_rcd2' in stats:
-        times['bcd_opt_rcd2'] = np.arange(len(stats['bcd_opt_rcd2']['mean'])) * 3
-    if 'bcd_c' in stats:
-        times['bcd_c'] = np.arange(len(stats['bcd_c']['mean'])) * 3
-    if 'bcd_g' in stats:
-        times['bcd_g'] = np.arange(len(stats['bcd_g']['mean'])) * 3
-    if 'bcd_robust' in stats:
-        times['bcd_robust'] = np.arange(len(stats['bcd_robust']['mean'])) * 3
-    if 'bcd_reg' in stats:
-        times['bcd_reg'] = np.arange(len(stats['bcd_reg']['mean'])) * data['fevl_num_each_iter_reg']
-    if 'bcd_random_thetas' in stats:
-        times['bcd_random_thetas'] = np.arange(len(stats['bcd_random_thetas']['mean'])) * 3
-    if 'oicd' in stats:
-        times['oicd'] = np.arange(len(stats['oicd']['mean'])) * 2
-
-
-    for key, color in zip(times.keys(), colors[:len(times)]):
-        plt.plot(times[key], stats[key]['mean'], color=color, label=key.upper())
-        plt.fill_between(
-            times[key], 
-            stats[key]['mean'] - stats[key]['std'], 
-            stats[key]['mean'] + stats[key]['std'], 
-            color=color, alpha=0.2
-        )
-
-    plt.title('Energy Ratio')
-    plt.xlabel('Number of function evaluations')
-    plt.ylabel('Energy ratio: $ E / E_{GS}$')
-    plt.legend()
-    if args.x_lim > 0:
-        plt.xlim(0, args.x_lim)
-    plt.xlim(0, min(max(times[key]) for key in times.keys()))
-    plt.grid()
-    plt.tight_layout()
-    plt.savefig(f'{plot_path}/energy_HM_fun_evals.png')
-    plt.clf()
+   
 
 def main():
     args = parse_arguments()
-    folder_path, plot_path = setup_directories(args)
-    experiments = load_experiments(folder_path)
-    dataframes = collect_function_values(folder_path, experiments)
-    stats = calculate_mean_std(dataframes)
-    plot_energy_ratio(stats, plot_path, args.x_lim)
-    sample_data = load(os.path.join(folder_path, experiments[0], 'data_dict.pkl'))
-    plot_function_evaluations(stats, plot_path, args, sample_data)
+
+    # Define paths
+    exp_path = f'exp/{args.phys}'
+    plot_path = f'plots/{args.phys}'
+
+    fig_prefix = f'N{args.N}_layer{args.layer}_Delta{args.Delta}_repeat{args.repeat}_'
+
+    # Check for and delete all files starting with fig_prefix in plot_path
+    files_to_remove = glob(os.path.join(plot_path, f'{fig_prefix}*'))
+
+    for file in files_to_remove:
+        os.remove(file)
+        print(f"Deleted file: {file}")
+
+    # Ensure the plot directory exists (only creates if doesn't exist)
+    os.makedirs(plot_path, exist_ok=True)
+
+    # Get list of experiments
+    num_exp = len(glob(f'{exp_path}/exp_*'))
+    experiments = [f'exp_{i}' for i in range(num_exp)]
+
+    algos = ['gd', 'rcd', 'oicd']
+
+    ################################ prepare function calling data
+    function_calls = {key: [] for key in algos}
+
+    # Load and process data
+    for experiment in experiments:
+        file_path = os.path.join(exp_path, experiment, 'data_dict.pkl')
+        data = load_data(file_path)
+
+        for key in algos:
+            function_calls[key].append(data[f'func_{key}'])
+
+    # Pad the lists to have the same length
+    max_len = max(
+        max(len(lst) for lst in function_calls['gd']), 
+        max(len(lst) for lst in function_calls['rcd']), 
+        max(len(lst) for lst in function_calls['oicd'])
+        )
+    
+    file_path = os.path.join(exp_path, 'exp_0', 'weights_dict.pkl')
+    with open(file_path, 'rb') as file:
+        weights_dict = pickle.load(file)
+
+    # Pad loss lists and function calls to the same length
+    for key in algos:
+        function_calls[key] = [pad_to_length_func(arr, max_len, key, weights_dict) for arr in function_calls[key]]
+
+    function_calls_mean, _, _, _ = calculate_statistics(function_calls)
+
+    plot_xlim = max(len(lst) for lst in function_calls['oicd'])
+
+    ################################
+    # Initialize data structures
+    best_expected_all = {key: [] for key in algos}
+    every_expected_all = {key: [] for key in algos}
+    best_fid_all = {key: [] for key in algos}
+    every_fid_all = {key: [] for key in algos}
+
+    # Load and process data
+    for experiment in experiments:
+        file_path = os.path.join(exp_path, experiment, 'data_dict.pkl')
+        data = load_data(file_path)
+
+        for key in algos:
+            best_expected_all[key].append(data[f'best_expected_{key}'])
+            every_expected_all[key].append(data[f'every_expected_{key}'])
+            best_fid_all[key].append(data[f'fid_{key}'])
+            every_fid_all[key].append(data[f'every_fid_{key}'])
+ 
+    # Pad loss lists and function calls to the same length
+    for key in algos:
+        best_expected_all[key] = [pad_to_length(arr, max_len, 1) for arr in best_expected_all[key]]
+        every_expected_all[key] = [pad_to_length(arr, max_len, 1) for arr in every_expected_all[key]]
+        best_fid_all[key] = [pad_to_length(arr, max_len, 1) for arr in best_fid_all[key]]
+        every_fid_all[key] = [pad_to_length(arr, max_len, 1) for arr in every_fid_all[key]]
+    
+    def plot_values(all, name):
+        all = {key: np.vstack(values) for key, values in all.items()}
+        MEAN, STD, MAX, MIN = calculate_statistics(all)
+        plot_loss(function_calls_mean, MEAN, STD, plot_path, fig_prefix, plot_xlim, args, name)
+
+    plot_values(best_expected_all, 'best_expected')
+    plot_values(every_expected_all, 'every_expected')
+    plot_values(best_fid_all, 'best_fid')
+    plot_values(every_fid_all, 'every_fid')
 
 if __name__ == "__main__":
     main()

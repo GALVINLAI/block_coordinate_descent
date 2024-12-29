@@ -138,3 +138,4 @@ def hamiltonian_to_matrix(hamiltonian_str, n_qubits=-1):
 # Test the function
 # hamiltonian_str = "-3.0 + 0.5 * Z0 + 0.25 * Z1 + 0.25 * Z2 + 0.5 * Z3 + 0.75 * Z0*Z2 - 0.25 * Z1*Z2 + 0.25 * Z0*Z1 + 0.25 * Z0*Z3 + 0.75 * Z1*Z3 + 0.25 * Z2*Z3 - 0.25 * Z0*Z1*Z2 - 0.25 * Z1*Z2*Z3"
 # print(hamiltonian_to_matrix(hamiltonian_str).astype(np.float64))
+
