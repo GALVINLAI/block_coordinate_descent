@@ -1,0 +1,16 @@
+\documentclass[border=2px]{standalone}
+
+\usepackage[braket, qm]{qcircuit}
+\usepackage{graphicx}
+
+\begin{document}
+\scalebox{1.0}{
+\Qcircuit @C=1.0em @R=0.2em @!R { \\
+	 	\nghost{{q}_{0} :  } & \lstick{{q}_{0} :  } & \gate{\mathrm{X}} & \gate{\mathrm{H}} & \ctrl{1} & \qw & \qw & \qw & \qw & \control \qw & \qw & \qw & \qw & \qw & \multigate{5}{\mathrm{R_{YY}}\,(\mathrm{w[1]})}_<<<{1} & \qw & \multigate{5}{\mathrm{R_{XX}}\,(\mathrm{w[1]})}_<<<{1} & \ctrl{1} & \dstick{\hspace{2.0em}\mathrm{ZZ}\,(\mathrm{w[2]})} \qw & \qw & \qw & \multigate{1}{\mathrm{R_{YY}}\,(\mathrm{w[3]})}_<<<{0} & \multigate{1}{\mathrm{R_{XX}}\,(\mathrm{w[3]})}_<<<{0} & \qw & \qw\\
+	 	\nghost{{q}_{1} :  } & \lstick{{q}_{1} :  } & \gate{\mathrm{X}} & \qw & \targ & \ctrl{1} & \dstick{\hspace{2.0em}\mathrm{ZZ}\,(\mathrm{w[0]})} \qw & \qw & \qw & \qw & \qw & \qw & \qw & \multigate{1}{\mathrm{R_{YY}}\,(\mathrm{w[1]})}_<<<{0} & \ghost{\mathrm{R_{YY}}\,(\mathrm{w[1]})} & \multigate{1}{\mathrm{R_{XX}}\,(\mathrm{w[1]})}_<<<{0} & \ghost{\mathrm{R_{XX}}\,(\mathrm{w[1]})} & \control \qw & \qw & \qw & \qw & \ghost{\mathrm{R_{YY}}\,(\mathrm{w[3]})}_<<<{1} & \ghost{\mathrm{R_{XX}}\,(\mathrm{w[3]})}_<<<{1} & \qw & \qw\\
+	 	\nghost{{q}_{2} :  } & \lstick{{q}_{2} :  } & \gate{\mathrm{X}} & \gate{\mathrm{H}} & \ctrl{1} & \control \qw & \qw & \qw & \qw & \qw & \qw & \qw & \qw & \ghost{\mathrm{R_{YY}}\,(\mathrm{w[1]})}_<<<{1} & \ghost{\mathrm{R_{YY}}\,(\mathrm{w[1]})} & \ghost{\mathrm{R_{XX}}\,(\mathrm{w[1]})}_<<<{1} & \ghost{\mathrm{R_{XX}}\,(\mathrm{w[1]})} & \ctrl{1} & \dstick{\hspace{2.0em}\mathrm{ZZ}\,(\mathrm{w[2]})} \qw & \qw & \qw & \multigate{1}{\mathrm{R_{YY}}\,(\mathrm{w[3]})}_<<<{0} & \multigate{1}{\mathrm{R_{XX}}\,(\mathrm{w[3]})}_<<<{0} & \qw & \qw\\
+	 	\nghost{{q}_{3} :  } & \lstick{{q}_{3} :  } & \gate{\mathrm{X}} & \qw & \targ & \ctrl{1} & \dstick{\hspace{2.0em}\mathrm{ZZ}\,(\mathrm{w[0]})} \qw & \qw & \qw & \qw & \qw & \qw & \qw & \multigate{1}{\mathrm{R_{YY}}\,(\mathrm{w[1]})}_<<<{0} & \ghost{\mathrm{R_{YY}}\,(\mathrm{w[1]})} & \multigate{1}{\mathrm{R_{XX}}\,(\mathrm{w[1]})}_<<<{0} & \ghost{\mathrm{R_{XX}}\,(\mathrm{w[1]})} & \control \qw & \qw & \qw & \qw & \ghost{\mathrm{R_{YY}}\,(\mathrm{w[3]})}_<<<{1} & \ghost{\mathrm{R_{XX}}\,(\mathrm{w[3]})}_<<<{1} & \qw & \qw\\
+	 	\nghost{{q}_{4} :  } & \lstick{{q}_{4} :  } & \gate{\mathrm{X}} & \gate{\mathrm{H}} & \ctrl{1} & \control \qw & \qw & \qw & \qw & \qw & \dstick{\hspace{2.0em}\mathrm{ZZ}\,(\mathrm{w[0]})} \qw & \qw & \qw & \ghost{\mathrm{R_{YY}}\,(\mathrm{w[1]})}_<<<{1} & \ghost{\mathrm{R_{YY}}\,(\mathrm{w[1]})} & \ghost{\mathrm{R_{XX}}\,(\mathrm{w[1]})}_<<<{1} & \ghost{\mathrm{R_{XX}}\,(\mathrm{w[1]})} & \ctrl{1} & \dstick{\hspace{2.0em}\mathrm{ZZ}\,(\mathrm{w[2]})} \qw & \qw & \qw & \multigate{1}{\mathrm{R_{YY}}\,(\mathrm{w[3]})}_<<<{0} & \multigate{1}{\mathrm{R_{XX}}\,(\mathrm{w[3]})}_<<<{0} & \qw & \qw\\
+	 	\nghost{{q}_{5} :  } & \lstick{{q}_{5} :  } & \gate{\mathrm{X}} & \qw & \targ & \qw & \qw & \qw & \qw & \ctrl{-5} & \qw & \qw & \qw & \qw & \ghost{\mathrm{R_{YY}}\,(\mathrm{w[1]})}_<<<{0} & \qw & \ghost{\mathrm{R_{XX}}\,(\mathrm{w[1]})}_<<<{0} & \control \qw & \qw & \qw & \qw & \ghost{\mathrm{R_{YY}}\,(\mathrm{w[3]})}_<<<{1} & \ghost{\mathrm{R_{XX}}\,(\mathrm{w[3]})}_<<<{1} & \qw & \qw\\
+\\ }}
+\end{document}

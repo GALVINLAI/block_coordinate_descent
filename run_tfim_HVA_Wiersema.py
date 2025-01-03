@@ -74,7 +74,7 @@ n_shot = args.n_shot
 
 ######################## max-cut problem setup ########################
 
-num_q = args.N # N # IMPORTANT 
+num_q = args.num_q # N # IMPORTANT 
 Delta = args.Delta # g
 
 # num_q = 4, layer = 2. too sample, RCD is good as ours

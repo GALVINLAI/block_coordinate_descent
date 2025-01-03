@@ -86,10 +86,10 @@ def rcd(estimate_loss_fun,
         t.set_description(f"[{name}] %s" % message)
         t.refresh()
 
-        if plot_flag:
-            # plot_every_iteration(expected_record_value, fidelity_record_value, name)
+        if plot_flag and i % 10 == 0:
+            plot_every_iteration(expected_record_value, fidelity_record_value, name)
             # plot_every_iteration(best_expected_record_value, fidelity_record_value, name)
-            plot_every_iteration(best_expected_record_value, best_fid_record_value, name)
+            # plot_every_iteration(best_expected_record_value, best_fid_record_value, name)
 
         if np.abs(fid - 1) < 1e-3:
             break

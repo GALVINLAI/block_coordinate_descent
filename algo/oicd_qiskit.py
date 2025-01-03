@@ -254,7 +254,8 @@ def oicd(estimate_loss_fun,
         # t.set_postfix(message)
         t.refresh()
 
-        if plot_flag:
+        if plot_flag and i % 10 == 0:
+
             plot_every_iteration(expected_record_value, fidelity_record_value, name)
             # plot_every_iteration(best_expected_record_value, fidelity_record_value, name)
             # plot_every_iteration(best_expected_record_value, best_fid_record_value, name)

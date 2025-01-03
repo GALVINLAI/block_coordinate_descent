@@ -14,7 +14,7 @@ nice_fonts = {
     "font.family": "serif",
     "axes.labelsize": fontsize,
     "font.size": fontsize,
-    "legend.fontsize": fontsize,
+    "legend.fontsize": 15,
     "xtick.labelsize": fontsize,
     "ytick.labelsize": fontsize,
 }
